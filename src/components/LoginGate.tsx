@@ -6,7 +6,7 @@ import { UserCog, ShieldCheck, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import collectors from "@/data/collectors.json";
 import { supabase } from "@/integrations/supabase/client";
-import type { Session as SupabaseSession } from "@supabase/supabase-js";
+import type { Session as SupabaseSession, User as SupabaseUser } from "@supabase/supabase-js";
 
 const ADMIN_EMPLOYEE_ID = "972559";
 
@@ -37,10 +37,12 @@ export function clearSession() {
 }
 
 async function loadProfile(uid: string): Promise<Session | null> {
-  const [{ data: profile }, { data: roles }] = await Promise.all([
+  const [{ data: profile, error: profileError }, { data: roles, error: rolesError }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", uid),
   ]);
+  if (profileError) throw profileError;
+  if (rolesError) throw rolesError;
   if (!profile) return null;
   const role: "admin" | "collector" =
     roles?.some((r: any) => r.role === "admin") ? "admin" : "collector";
@@ -51,6 +53,40 @@ async function loadProfile(uid: string): Promise<Session | null> {
     supervisor: profile.supervisor ?? undefined,
     loginAt: new Date().toISOString(),
   };
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function sessionFromAuthUser(user: SupabaseUser): Session | null {
+  const emailId = user.email?.endsWith("@wallet.local") ? user.email.split("@")[0] : "";
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  const eid = String(emailId || meta?.employee_id || "").trim();
+  if (!eid) return null;
+  const collector = COLLECTORS.find((c) => c.employeeId === eid);
+  return {
+    role: eid === ADMIN_EMPLOYEE_ID ? "admin" : "collector",
+    employeeId: eid,
+    name: eid === ADMIN_EMPLOYEE_ID ? "الإدارة" : collector?.collector || String(meta?.name || eid),
+    supervisor: collector?.supervisor || String(meta?.supervisor || "") || undefined,
+    loginAt: new Date().toISOString(),
+  };
+}
+
+async function resolveSession(user: SupabaseUser): Promise<Session | null> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    try {
+      const profileSession = await loadProfile(user.id);
+      if (profileSession) return profileSession;
+    } catch (error) {
+      lastError = error;
+    }
+    await wait(200);
+  }
+  const fallback = sessionFromAuthUser(user);
+  if (fallback) return fallback;
+  if (lastError) throw lastError;
+  return null;
 }
 
 export default function LoginGate({ children }: { children: React.ReactNode }) {
@@ -64,23 +100,33 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    let loadSeq = 0;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSupaSession(s);
       if (!s?.user) {
+        loadSeq += 1;
         cachedSession = null;
         setSession(null);
+        setHydrated(true);
         return;
       }
       // Defer async work to avoid Supabase listener deadlock
+      const seq = ++loadSeq;
       setTimeout(() => {
-        loadProfile(s.user.id)
+        resolveSession(s.user)
           .then((p) => {
+            if (!active || seq !== loadSeq) return;
             cachedSession = p;
             setSession(p);
           })
           .catch((err) => {
+            if (!active || seq !== loadSeq) return;
             console.error("loadProfile failed", err);
             toast.error("تعذّر تحميل ملف المستخدم");
+          })
+          .finally(() => {
+            if (active && seq === loadSeq) setHydrated(true);
           });
       }, 0);
     });
@@ -90,15 +136,22 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
         setHydrated(true);
         return;
       }
-      loadProfile(data.session.user.id)
+      const seq = ++loadSeq;
+      resolveSession(data.session.user)
         .then((p) => {
+          if (!active || seq !== loadSeq) return;
           cachedSession = p;
           setSession(p);
         })
         .catch((err) => console.error("loadProfile failed", err))
-        .finally(() => setHydrated(true));
+        .finally(() => {
+          if (active && seq === loadSeq) setHydrated(true);
+        });
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (!hydrated) return null;
@@ -151,7 +204,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
           name = found.collector;
           supervisor = found.supervisor;
         }
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: synthEmail(eid),
           password,
           options: {
@@ -160,9 +213,19 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
           },
         });
         if (error) throw error;
-        toast.success("تم إنشاء الحساب");
+        if (data.session?.user) {
+          const nextSession = await resolveSession(data.session.user);
+          if (!nextSession) throw new Error("تعذّر تحميل ملف المستخدم");
+          cachedSession = nextSession;
+          setSupaSession(data.session);
+          setSession(nextSession);
+          toast.success("تم إنشاء الحساب وتم الدخول");
+        } else {
+          toast.success("تم إنشاء الحساب، سجّل الدخول للمتابعة");
+          setMode("signin");
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: synthEmail(eid),
           password,
         });
@@ -174,6 +237,13 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
           }
           return;
         }
+        const signedInUser = data.user || data.session?.user;
+        if (!signedInUser) throw new Error("تعذّر تأكيد جلسة الدخول");
+        const nextSession = await resolveSession(signedInUser);
+        if (!nextSession) throw new Error("تعذّر تحميل ملف المستخدم");
+        cachedSession = nextSession;
+        setSupaSession(data.session);
+        setSession(nextSession);
         toast.success("تم الدخول");
       }
     } catch (err: any) {
