@@ -14,16 +14,229 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      contact_logs: {
+        Row: {
+          channel: string
+          created_at: string
+          created_by: string | null
+          customer_key: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          created_by?: string | null
+          customer_key: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          created_by?: string | null
+          customer_key?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
+      customer_notes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_key: string
+          id: string
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_key: string
+          id?: string
+          text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_key?: string
+          id?: string
+          text?: string
+        }
+        Relationships: []
+      }
+      customer_states: {
+        Row: {
+          client_status: string | null
+          contacted: boolean | null
+          customer_key: string
+          default_date: string | null
+          edits: Json | null
+          has_exemption: boolean | null
+          has_reschedule: boolean | null
+          last_contacted_at: string | null
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          client_status?: string | null
+          contacted?: boolean | null
+          customer_key: string
+          default_date?: string | null
+          edits?: Json | null
+          has_exemption?: boolean | null
+          has_reschedule?: boolean | null
+          last_contacted_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          client_status?: string | null
+          contacted?: boolean | null
+          customer_key?: string
+          default_date?: string | null
+          edits?: Json | null
+          has_exemption?: boolean | null
+          has_reschedule?: boolean | null
+          last_contacted_at?: string | null
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          account_number: string | null
+          action: string | null
+          agent_employee_id: string | null
+          amount: number | null
+          customer_key: string
+          customer_name: string | null
+          debt_age: string | null
+          file_month: string | null
+          id: string
+          imported_at: string
+          imported_by: string | null
+          installment: string | null
+          is_deceased: boolean | null
+          is_salary: boolean | null
+          national_id: string | null
+          phone: string | null
+          product: string | null
+          raw: Json | null
+          supervisor: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          action?: string | null
+          agent_employee_id?: string | null
+          amount?: number | null
+          customer_key: string
+          customer_name?: string | null
+          debt_age?: string | null
+          file_month?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          installment?: string | null
+          is_deceased?: boolean | null
+          is_salary?: boolean | null
+          national_id?: string | null
+          phone?: string | null
+          product?: string | null
+          raw?: Json | null
+          supervisor?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          action?: string | null
+          agent_employee_id?: string | null
+          amount?: number | null
+          customer_key?: string
+          customer_name?: string | null
+          debt_age?: string | null
+          file_month?: string | null
+          id?: string
+          imported_at?: string
+          imported_by?: string | null
+          installment?: string | null
+          is_deceased?: boolean | null
+          is_salary?: boolean | null
+          national_id?: string | null
+          phone?: string | null
+          product?: string | null
+          raw?: Json | null
+          supervisor?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          name: string | null
+          supervisor: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id: string
+          name?: string | null
+          supervisor?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          name?: string | null
+          supervisor?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_employee_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "collector"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +363,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "collector"],
+    },
   },
 } as const

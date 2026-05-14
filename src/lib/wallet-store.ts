@@ -1,88 +1,247 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import type { Customer, CustomerState, ContactLog } from "./wallet-types";
+import { customerKey } from "./wallet-types";
 import defaultData from "@/data/wallet.json";
-
-const DATA_KEY = "wallet:data:v1";
-const STATE_KEY = "wallet:state:v1";
-const META_KEY = "wallet:meta:v1";
 
 type Meta = { fileName?: string; uploadedAt?: string; count: number };
 
-function readJSON<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+const ARABIC_FIELDS: (keyof Customer)[] = [
+  "رقم الحساب",
+  "المبلغ",
+  "الاكشن",
+  "التثبيت",
+  "المنتج",
+  "عمر الدين",
+  "رقم الهوية",
+  "اسم العميل",
+  "رقم الجوال",
+  "عميل رواتب",
+  "عميل متوفي",
+  "رقم القضية",
+  "رقم الطلب في نظام سيبل",
+  "طلب الطلب",
+  "ارصده محجوزه",
+];
+
+function rowToCustomer(row: any): Customer {
+  // If row has 'raw' jsonb (cloud row), prefer it; else assume Arabic-keyed row
+  const src = row.raw && typeof row.raw === "object" ? row.raw : row;
+  const out: any = {};
+  for (const f of ARABIC_FIELDS) out[f] = src[f] ?? null;
+  return out as Customer;
 }
 
-function writeJSON(key: string, value: unknown) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
+function customerToDbRow(c: Customer, importedBy: string | null) {
+  const isYes = (v: any) => {
+    if (v == null) return false;
+    const s = String(v).trim().toLowerCase();
+    if (!s) return false;
+    return !["no", "0", "false", "لا", "غير", "-"].includes(s);
+  };
+  const key = customerKey(c);
+  const amt = c["المبلغ"];
+  return {
+    customer_key: String(key),
+    account_number: c["رقم الحساب"] ? String(c["رقم الحساب"]) : null,
+    national_id: c["رقم الهوية"] ? String(c["رقم الهوية"]) : null,
+    customer_name: c["اسم العميل"] ?? null,
+    phone: c["رقم الجوال"] ? String(c["رقم الجوال"]) : null,
+    amount: amt != null && !isNaN(Number(amt)) ? Number(amt) : null,
+    product: c["المنتج"] ?? null,
+    debt_age: c["عمر الدين"] ?? null,
+    action: c["الاكشن"] ?? null,
+    installment: c["التثبيت"] ?? null,
+    is_salary: isYes(c["عميل رواتب"]),
+    is_deceased: isYes(c["عميل متوفي"]),
+    agent_employee_id: (c as any)["ID AGENT"] ?? (c as any)["agent_employee_id"] ?? null,
+    raw: c,
+    imported_by: importedBy,
+  };
 }
 
 export function useWallet() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [meta, setMeta] = useState<Meta>({ count: 0 });
+  const [meta, setMeta] = useState<Meta>({ count: 0, fileName: "محفظة سحابية" });
   const [hydrated, setHydrated] = useState(false);
 
-  useEffect(() => {
-    const stored = readJSON<Customer[] | null>(DATA_KEY, null);
-    const m = readJSON<Meta>(META_KEY, {
-      count: (defaultData as Customer[]).length,
-      fileName: "محفظة شهر مايو 2026",
-    });
-    setCustomers(stored && stored.length ? stored : (defaultData as Customer[]));
-    setMeta(m);
+  const load = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("customers")
+      .select("*")
+      .order("amount", { ascending: false })
+      .limit(50000);
+    if (error) {
+      console.error("load customers", error);
+      setCustomers([]);
+      setMeta({ count: 0, fileName: "خطأ في التحميل" });
+    } else {
+      const list = (data || []).map(rowToCustomer);
+      setCustomers(list);
+      const latest = (data || []).reduce(
+        (acc: string | undefined, r: any) =>
+          acc && new Date(acc) > new Date(r.imported_at) ? acc : r.imported_at,
+        undefined,
+      );
+      setMeta({
+        count: list.length,
+        fileName: list.length ? "محفظة سحابية" : "لا توجد بيانات",
+        uploadedAt: latest,
+      });
+    }
     setHydrated(true);
   }, []);
 
-  const replaceData = useCallback((next: Customer[], fileName?: string) => {
-    setCustomers(next);
-    writeJSON(DATA_KEY, next);
-    const m: Meta = {
-      fileName: fileName || "ملف مرفوع",
-      uploadedAt: new Date().toISOString(),
-      count: next.length,
-    };
-    setMeta(m);
-    writeJSON(META_KEY, m);
-  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
-  const resetData = useCallback(() => {
-    localStorage.removeItem(DATA_KEY);
-    localStorage.removeItem(META_KEY);
-    const def = defaultData as Customer[];
-    setCustomers(def);
-    setMeta({ count: def.length, fileName: "محفظة شهر مايو 2026" });
-  }, []);
+  const replaceData = useCallback(
+    async (next: Customer[], fileName?: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id ?? null;
+      // Delete all existing then insert in chunks
+      const { error: delErr } = await supabase
+        .from("customers")
+        .delete()
+        .not("id", "is", null);
+      if (delErr) {
+        console.error("delete customers", delErr);
+        throw delErr;
+      }
+      const rows = next.map((c) => ({
+        ...customerToDbRow(c, uid),
+        file_month: fileName || null,
+      }));
+      // Deduplicate by customer_key (last wins)
+      const dedup = new Map<string, any>();
+      for (const r of rows) {
+        if (r.customer_key) dedup.set(r.customer_key, r);
+      }
+      const finalRows = Array.from(dedup.values());
+      const CHUNK = 500;
+      for (let i = 0; i < finalRows.length; i += CHUNK) {
+        const slice = finalRows.slice(i, i + CHUNK);
+        const { error } = await supabase.from("customers").insert(slice);
+        if (error) {
+          console.error("insert chunk", error);
+          throw error;
+        }
+      }
+      await load();
+    },
+    [load],
+  );
 
-  return { customers, meta, hydrated, replaceData, resetData };
+  const resetData = useCallback(async () => {
+    await replaceData(defaultData as Customer[], "محفظة افتراضية");
+  }, [replaceData]);
+
+  return { customers, meta, hydrated, replaceData, resetData, reload: load };
 }
 
 export function useCustomerStates() {
   const [states, setStates] = useState<Record<string, CustomerState>>({});
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    setStates(readJSON<Record<string, CustomerState>>(STATE_KEY, {}));
+    if (loadedRef.current) return;
+    loadedRef.current = true;
+    void (async () => {
+      const { data, error } = await supabase
+        .from("customer_states")
+        .select("*")
+        .limit(50000);
+      if (error) {
+        console.error("load states", error);
+        return;
+      }
+      const map: Record<string, CustomerState> = {};
+      for (const r of data || []) {
+        map[r.customer_key] = {
+          contacted: !!r.contacted,
+          lastContactedAt: r.last_contacted_at ?? undefined,
+          notes: r.notes ?? undefined,
+          hasExemption: !!r.has_exemption,
+          hasReschedule: !!r.has_reschedule,
+          defaultDate: r.default_date ?? undefined,
+          clientStatus: (r.client_status as any) ?? undefined,
+          edits: (r.edits as any) ?? undefined,
+        };
+      }
+      // Load logs grouped by customer_key
+      const { data: logs } = await supabase
+        .from("contact_logs")
+        .select("customer_key, channel, note, created_at")
+        .order("created_at", { ascending: true })
+        .limit(50000);
+      for (const l of logs || []) {
+        const cur = map[l.customer_key] || { contacted: false };
+        cur.logs = [
+          ...(cur.logs || []),
+          { date: l.created_at, channel: l.channel as any, note: l.note ?? undefined },
+        ];
+        map[l.customer_key] = cur;
+      }
+      // Load notes
+      const { data: noteRows } = await supabase
+        .from("customer_notes")
+        .select("customer_key, text, created_at")
+        .order("created_at", { ascending: true })
+        .limit(50000);
+      for (const n of noteRows || []) {
+        const cur = map[n.customer_key] || { contacted: false };
+        cur.noteLog = [
+          ...(cur.noteLog || []),
+          { date: n.created_at, text: n.text },
+        ];
+        map[n.customer_key] = cur;
+      }
+      setStates(map);
+    })();
   }, []);
 
-  const update = useCallback(
-    (key: string, patch: Partial<CustomerState>) => {
-      setStates((prev) => {
-        const cur = prev[key] || { contacted: false };
-        const next = {
-          ...prev,
-          [key]: { ...cur, ...patch },
-        };
-        writeJSON(STATE_KEY, next);
-        return next;
-      });
-    },
-    [],
-  );
+  const update = useCallback((key: string, patch: Partial<CustomerState>) => {
+    setStates((prev) => {
+      const cur = prev[key] || { contacted: false };
+      const merged = { ...cur, ...patch };
+      void supabase
+        .from("customer_states")
+        .upsert(
+          {
+            customer_key: key,
+            contacted: merged.contacted ?? false,
+            last_contacted_at: merged.lastContactedAt ?? null,
+            notes: merged.notes ?? null,
+            has_exemption: merged.hasExemption ?? false,
+            has_reschedule: merged.hasReschedule ?? false,
+            default_date: merged.defaultDate ?? null,
+            client_status: merged.clientStatus ?? null,
+            edits: merged.edits ?? null,
+            updated_by: null,
+          },
+          { onConflict: "customer_key" },
+        )
+        .then(({ error }) => {
+          if (error) console.error("upsert state", error);
+        });
+      // Persist note log additions
+      if (patch.noteLog && patch.noteLog.length > (cur.noteLog?.length || 0)) {
+        const newOnes = patch.noteLog.slice(cur.noteLog?.length || 0);
+        void (async () => {
+          const { data: u } = await supabase.auth.getUser();
+          for (const n of newOnes) {
+            await supabase.from("customer_notes").insert({
+              customer_key: key,
+              text: n.text,
+              created_by: u.user?.id ?? null,
+            });
+          }
+        })();
+      }
+      return { ...prev, [key]: merged };
+    });
+  }, []);
 
   const addLog = useCallback((key: string, log: ContactLog) => {
     setStates((prev) => {
@@ -96,7 +255,25 @@ export function useCustomerStates() {
           logs: [...(cur.logs || []), log],
         },
       };
-      writeJSON(STATE_KEY, next);
+      void (async () => {
+        const { data: u } = await supabase.auth.getUser();
+        await supabase.from("contact_logs").insert({
+          customer_key: key,
+          channel: log.channel,
+          note: log.note ?? null,
+          created_by: u.user?.id ?? null,
+        });
+        await supabase
+          .from("customer_states")
+          .upsert(
+            {
+              customer_key: key,
+              contacted: true,
+              last_contacted_at: log.date,
+            },
+            { onConflict: "customer_key" },
+          );
+      })();
       return next;
     });
   }, []);
