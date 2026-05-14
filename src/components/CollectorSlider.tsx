@@ -32,6 +32,9 @@ export function CollectorSlider({
   walletTotal: number;
 }) {
   const now = useNow();
+  const session = getSession();
+  const collectorName = session?.name || "—";
+  const employeeId = session?.employeeId || "—";
   const eom = endOfMonth(now);
   const diff = Math.max(0, eom.getTime() - now.getTime());
   const days = Math.floor(diff / 86400000);
@@ -51,10 +54,10 @@ export function CollectorSlider({
             <User className="size-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-base font-bold leading-tight truncate">{COLLECTOR_NAME}</div>
+            <div className="text-base font-bold leading-tight truncate">{collectorName}</div>
             <div className="flex items-center gap-1 text-[11px] opacity-85 mt-0.5">
               <IdCard className="size-3.5" />
-              <span className="tabular-nums">{EMPLOYEE_ID}</span>
+              <span className="tabular-nums">{employeeId}</span>
             </div>
           </div>
           <div className="text-left text-[10px] leading-tight opacity-90 shrink-0">
