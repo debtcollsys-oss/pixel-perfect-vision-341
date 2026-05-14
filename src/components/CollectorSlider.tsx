@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { User, IdCard, Clock, Target, Users, Wallet } from "lucide-react";
+import { getSession } from "@/components/LoginGate";
 
-const COLLECTOR_NAME = "ماجد عامر السفياني";
-const EMPLOYEE_ID = "972559";
 const TARGET = 350000;
 
 function endOfMonth(d: Date) {
