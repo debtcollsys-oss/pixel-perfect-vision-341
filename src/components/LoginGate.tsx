@@ -66,34 +66,44 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setSupaSession(s);
-      if (s?.user) {
-        void loadProfile(s.user.id).then((p) => {
-          cachedSession = p;
-          setSession(p);
-        });
-      } else {
+      if (!s?.user) {
         cachedSession = null;
         setSession(null);
+        return;
       }
+      // Defer async work to avoid Supabase listener deadlock
+      setTimeout(() => {
+        loadProfile(s.user.id)
+          .then((p) => {
+            cachedSession = p;
+            setSession(p);
+          })
+          .catch((err) => {
+            console.error("loadProfile failed", err);
+            toast.error("تعذّر تحميل ملف المستخدم");
+          });
+      }, 0);
     });
-    void supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }) => {
       setSupaSession(data.session);
-      if (data.session?.user) {
-        void loadProfile(data.session.user.id).then((p) => {
+      if (!data.session?.user) {
+        setHydrated(true);
+        return;
+      }
+      loadProfile(data.session.user.id)
+        .then((p) => {
           cachedSession = p;
           setSession(p);
-          setHydrated(true);
-        });
-      } else {
-        setHydrated(true);
-      }
+        })
+        .catch((err) => console.error("loadProfile failed", err))
+        .finally(() => setHydrated(true));
     });
     return () => subscription.unsubscribe();
   }, []);
 
   if (!hydrated) return null;
 
-  if (session && supaSession) {
+  if (session) {
     return (
       <>
         <div className="fixed top-2 left-2 z-50 flex items-center gap-2 rounded-full bg-card/90 backdrop-blur px-3 py-1 text-xs shadow border">
