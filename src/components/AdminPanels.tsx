@@ -11,6 +11,8 @@ import MappingReview, { loadDefaultMapping, type FileKind } from "@/components/M
 import { detectMapping, type DetectionResult, type Mapping } from "@/lib/mapping-engine";
 import type { CanonicalRow } from "@/lib/canonical-schema";
 
+const db = supabase as any;
+
 function toStrId(v: any): string | null {
   if (v == null || String(v).trim() === "") return null;
   const n = Number(v);
@@ -58,7 +60,7 @@ export function CasesUploadPanel() {
   const [review, setReview] = useState<ReviewState>(null);
 
   const loadCount = async () => {
-    const { count: c, data } = await supabase
+    const { count: c, data } = await db
       .from("cases_file")
       .select("uploaded_at", { count: "exact", head: false })
       .order("uploaded_at", { ascending: false })
@@ -95,10 +97,10 @@ export function CasesUploadPanel() {
         raw: raws[i] as any,
         file_name: fileName,
       }));
-      await supabase.from("cases_file").delete().not("id", "is", null);
+      await db.from("cases_file").delete().not("id", "is", null);
       const CHUNK = 500;
       for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await supabase.from("cases_file").insert(rows.slice(i, i + CHUNK));
+        const { error } = await db.from("cases_file").insert(rows.slice(i, i + CHUNK));
         if (error) throw error;
       }
       toast.success(`تم رفع ${rows.length} قضية`);
@@ -168,7 +170,7 @@ export function RequestsUploadPanel() {
   const [review, setReview] = useState<ReviewState>(null);
 
   const loadCount = async () => {
-    const { count: c, data } = await supabase
+    const { count: c, data } = await db
       .from("requests_file")
       .select("uploaded_at, request_type", { count: "exact" })
       .order("uploaded_at", { ascending: false })
@@ -213,10 +215,10 @@ export function RequestsUploadPanel() {
         raw: raws[i] as any,
         file_name: fileName,
       }));
-      await supabase.from("requests_file").delete().not("id", "is", null);
+      await db.from("requests_file").delete().not("id", "is", null);
       const CHUNK = 500;
       for (let i = 0; i < rows.length; i += CHUNK) {
-        const { error } = await supabase.from("requests_file").insert(rows.slice(i, i + CHUNK));
+        const { error } = await db.from("requests_file").insert(rows.slice(i, i + CHUNK));
         if (error) throw error;
       }
       toast.success(`تم رفع ${rows.length} طلب`);
@@ -295,7 +297,7 @@ export function WalletChangesPanel() {
   const [review, setReview] = useState<ReviewState>(null);
 
   const loadHistory = async () => {
-    const { data } = await supabase
+    const { data } = await db
       .from("wallet_changes_log")
       .select("*")
       .order("performed_at", { ascending: false })
@@ -366,7 +368,7 @@ export function WalletChangesPanel() {
         }
       }
 
-      await supabase.from("wallet_changes_log").insert({
+      await db.from("wallet_changes_log").insert({
         change_type: isExclude ? "exclude" : isTransfer ? "transfer" : isAdd ? "add" : "update",
         description: desc,
         affected_count: affected,
