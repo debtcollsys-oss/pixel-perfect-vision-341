@@ -33,6 +33,16 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: "Cairo", "IBM Plex Sans Arabic", system-ui, sans-serif;
+  /* Brand teal — replaces emerald palette across the app */
+  --color-emerald-50: #eaf3f1;
+  --color-emerald-100: #d3e7e3;
+  --color-emerald-200: #a8cfc7;
+  --color-emerald-300: #7db6ab;
+  --color-emerald-400: #5a9b8f;
+  --color-emerald-500: #3f7a70;
+  --color-emerald-600: #2f5d55;
+  --color-emerald-700: #234741;
+  --color-emerald-950: #0e1f1c;
 }
 
 :root {
@@ -43,17 +53,17 @@
   --card-foreground: oklch(0.18 0.03 240);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.03 240);
-  --primary: oklch(0.45 0.15 165);
+  --primary: oklch(0.38 0.05 175);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.95 0.01 240);
   --secondary-foreground: oklch(0.25 0.03 240);
   --muted: oklch(0.95 0.01 240);
   --muted-foreground: oklch(0.5 0.02 240);
-  --accent: oklch(0.93 0.04 165);
-  --accent-foreground: oklch(0.25 0.05 165);
+  --accent: oklch(0.92 0.02 175);
+  --accent-foreground: oklch(0.28 0.04 175);
   --destructive: oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.65 0.16 150);
+  --success: oklch(0.45 0.06 170);
   --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.75 0.16 75);
   --warning-foreground: oklch(0.2 0.05 75);

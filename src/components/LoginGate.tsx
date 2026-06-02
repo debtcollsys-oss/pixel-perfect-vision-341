@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { UserCog, ShieldCheck, LogOut } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  ShieldCheck,
+  BarChart3,
+  LogIn,
+} from "lucide-react";
 import { toast } from "sonner";
 import collectors from "@/data/collectors.json";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session as SupabaseSession, User as SupabaseUser } from "@supabase/supabase-js";
+import slide1 from "@/assets/slide-1.png";
+import slide2 from "@/assets/slide-2.png";
+import slide3 from "@/assets/slide-3.png";
+import slide4 from "@/assets/slide-4.png";
+import slide5 from "@/assets/slide-5.png";
+import slide6 from "@/assets/slide-6.png";
 
-const ADMIN_EMPLOYEE_ID = "972559";
+const ADMIN_USERNAME = "666666";
+const ADMIN_PASSWORD = "654321";
+const COLLECTOR_PASSWORD = "123456";
+const STORAGE_KEY = "wallet:session";
 
 type Collector = { supervisor: string; collector: string; employeeId: string };
 const COLLECTORS = collectors as Collector[];
@@ -21,317 +32,267 @@ export type Session = {
   loginAt: string;
 };
 
-const synthEmail = (eid: string) => `${eid.trim()}@wallet.local`;
-
 let cachedSession: Session | null = null;
+const listeners = new Set<() => void>();
+
+function readStored(): Session | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as Session;
+  } catch {
+    return null;
+  }
+}
 
 export function getSession(): Session | null {
+  if (!cachedSession) cachedSession = readStored();
   return cachedSession;
 }
 
-export function clearSession() {
-  void supabase.auth.signOut().then(() => {
-    cachedSession = null;
-    window.location.reload();
-  });
-}
-
-async function loadProfile(uid: string): Promise<Session | null> {
-  const [{ data: profile, error: profileError }, { data: roles, error: rolesError }] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-    supabase.from("user_roles").select("role").eq("user_id", uid),
-  ]);
-  if (profileError) throw profileError;
-  if (rolesError) throw rolesError;
-  if (!profile) return null;
-  const role: "admin" | "collector" =
-    roles?.some((r: any) => r.role === "admin") ? "admin" : "collector";
-  return {
-    role,
-    employeeId: profile.employee_id,
-    name: profile.name ?? undefined,
-    supervisor: profile.supervisor ?? undefined,
-    loginAt: new Date().toISOString(),
-  };
-}
-
-const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function sessionFromAuthUser(user: SupabaseUser): Session | null {
-  const emailId = user.email?.endsWith("@wallet.local") ? user.email.split("@")[0] : "";
-  const meta = user.user_metadata as Record<string, unknown> | undefined;
-  const eid = String(emailId || meta?.employee_id || "").trim();
-  if (!eid) return null;
-  const collector = COLLECTORS.find((c) => c.employeeId === eid);
-  return {
-    role: eid === ADMIN_EMPLOYEE_ID ? "admin" : "collector",
-    employeeId: eid,
-    name: eid === ADMIN_EMPLOYEE_ID ? "الإدارة" : collector?.collector || String(meta?.name || eid),
-    supervisor: collector?.supervisor || String(meta?.supervisor || "") || undefined,
-    loginAt: new Date().toISOString(),
-  };
-}
-
-async function resolveSession(user: SupabaseUser): Promise<Session | null> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    try {
-      const profileSession = await loadProfile(user.id);
-      if (profileSession) return profileSession;
-    } catch (error) {
-      lastError = error;
-    }
-    await wait(200);
+function setSessionState(s: Session | null) {
+  cachedSession = s;
+  if (typeof window !== "undefined") {
+    if (s) localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    else localStorage.removeItem(STORAGE_KEY);
   }
-  const fallback = sessionFromAuthUser(user);
-  if (fallback) return fallback;
-  if (lastError) throw lastError;
-  return null;
+  listeners.forEach((l) => l());
+}
+
+export function clearSession() {
+  setSessionState(null);
+}
+
+function useNow() {
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
 }
 
 export default function LoginGate({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [supaSession, setSupaSession] = useState<SupabaseSession | null>(null);
-  const [hydrated, setHydrated] = useState(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [role, setRole] = useState<"collector" | "admin" | null>(null);
+  const [session, setSession] = useState<Session | null>(() => getSession());
+  const [role, setRole] = useState<"collector" | "admin">("collector");
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const now = useNow();
 
   useEffect(() => {
-    let active = true;
-    let loadSeq = 0;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSupaSession(s);
-      if (!s?.user) {
-        loadSeq += 1;
-        cachedSession = null;
-        setSession(null);
-        setHydrated(true);
-        return;
-      }
-      // Defer async work to avoid Supabase listener deadlock
-      const seq = ++loadSeq;
-      setTimeout(() => {
-        resolveSession(s.user)
-          .then((p) => {
-            if (!active || seq !== loadSeq) return;
-            cachedSession = p;
-            setSession(p);
-          })
-          .catch((err) => {
-            if (!active || seq !== loadSeq) return;
-            console.error("loadProfile failed", err);
-            toast.error("تعذّر تحميل ملف المستخدم");
-          })
-          .finally(() => {
-            if (active && seq === loadSeq) setHydrated(true);
-          });
-      }, 0);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSupaSession(data.session);
-      if (!data.session?.user) {
-        setHydrated(true);
-        return;
-      }
-      const seq = ++loadSeq;
-      resolveSession(data.session.user)
-        .then((p) => {
-          if (!active || seq !== loadSeq) return;
-          cachedSession = p;
-          setSession(p);
-        })
-        .catch((err) => console.error("loadProfile failed", err))
-        .finally(() => {
-          if (active && seq === loadSeq) setHydrated(true);
-        });
-    });
-    return () => {
-      active = false;
-      subscription.unsubscribe();
-    };
+    const cb = () => setSession(getSession());
+    listeners.add(cb);
+    return () => { listeners.delete(cb); };
   }, []);
 
-  if (!hydrated) return null;
-
   if (session) {
-    return (
-      <>
-        <div className="fixed top-2 left-2 z-50 flex items-center gap-2 rounded-full bg-card/90 backdrop-blur px-3 py-1 text-xs shadow border">
-          <span className="font-medium">
-            {session.role === "admin" ? "إدارة" : "محصّل"} · {session.name || session.employeeId}
-          </span>
-          <Button size="sm" variant="ghost" className="h-6 px-2" onClick={clearSession}>
-            <LogOut className="size-3" />
-          </Button>
-        </div>
-        {children}
-      </>
-    );
+    return <>{children}</>;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!role) return;
     const eid = employeeId.trim();
-    if (!eid) {
-      toast.error("أدخل الرقم الوظيفي");
-      return;
-    }
-    if (password.length < 6) {
-      toast.error("كلمة المرور يجب ألا تقل عن 6 أحرف");
-      return;
-    }
+    if (!eid) { toast.error("أدخل الرقم الوظيفي"); return; }
+    if (!password) { toast.error("أدخل كلمة المرور"); return; }
     setBusy(true);
     try {
-      if (mode === "signup") {
-        let name: string | undefined;
-        let supervisor: string | undefined;
-        if (role === "admin") {
-          if (eid !== ADMIN_EMPLOYEE_ID) {
-            toast.error("رقم وظيفي غير مصرّح للإدارة");
-            return;
-          }
-          name = "الإدارة";
-        } else {
-          const found = COLLECTORS.find((c) => c.employeeId === eid);
-          if (!found) {
-            toast.error("الرقم الوظيفي غير موجود في قائمة المحصلين");
-            return;
-          }
-          name = found.collector;
-          supervisor = found.supervisor;
-        }
-        const { data, error } = await supabase.auth.signUp({
-          email: synthEmail(eid),
-          password,
-          options: {
-            emailRedirectTo: window.location.origin,
-            data: { employee_id: eid, name, supervisor, role },
-          },
-        });
-        if (error) throw error;
-        if (data.session?.user) {
-          const nextSession = await resolveSession(data.session.user);
-          if (!nextSession) throw new Error("تعذّر تحميل ملف المستخدم");
-          cachedSession = nextSession;
-          setSupaSession(data.session);
-          setSession(nextSession);
-          toast.success("تم إنشاء الحساب وتم الدخول");
-        } else {
-          toast.success("تم إنشاء الحساب، سجّل الدخول للمتابعة");
-          setMode("signin");
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: synthEmail(eid),
-          password,
-        });
-        if (error) {
-          if (error.message.toLowerCase().includes("invalid")) {
-            toast.error("بيانات الدخول غير صحيحة. لأول مرة استخدم 'إنشاء حساب'");
-          } else {
-            toast.error(error.message);
-          }
+      if (role === "admin") {
+        if (eid === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+          setSessionState({
+            role: "admin",
+            employeeId: eid,
+            name: "الإدارة",
+            loginAt: new Date().toISOString(),
+          });
+          toast.success("تم الدخول كإدارة");
           return;
         }
-        const signedInUser = data.user || data.session?.user;
-        if (!signedInUser) throw new Error("تعذّر تأكيد جلسة الدخول");
-        const nextSession = await resolveSession(signedInUser);
-        if (!nextSession) throw new Error("تعذّر تحميل ملف المستخدم");
-        cachedSession = nextSession;
-        setSupaSession(data.session);
-        setSession(nextSession);
-        toast.success("تم الدخول");
+        toast.error("بيانات الإدارة غير صحيحة");
+        return;
       }
-    } catch (err: any) {
-      toast.error(err?.message || "حدث خطأ");
+      if (password !== COLLECTOR_PASSWORD) {
+        toast.error("كلمة المرور غير صحيحة");
+        return;
+      }
+      const found = COLLECTORS.find((c) => c.employeeId === eid);
+      setSessionState({
+        role: "collector",
+        employeeId: eid,
+        name: found?.collector || eid,
+        supervisor: found?.supervisor,
+        loginAt: new Date().toISOString(),
+      });
+      toast.success("تم الدخول");
     } finally {
       setBusy(false);
     }
   }
 
+  const openLogin = () => {
+    setRole("collector");
+    setEmployeeId("");
+    setPassword("");
+    setLoginOpen(true);
+  };
+
+  const time = now ? now.toLocaleTimeString("en-GB", { hour12: false }) : "";
+  const date = now ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-      <Card className="w-full max-w-sm p-6 space-y-5">
-        <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold">{mode === "signup" ? "إنشاء حساب" : "تسجيل الدخول"}</h1>
-          <p className="text-xs text-muted-foreground">اختر طريقة الدخول للمتابعة</p>
+    <div className="relative min-h-screen w-full overflow-x-hidden" dir="rtl">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#27433e] via-[#1f3a36] to-[#152a27]" />
+
+      <header className="sticky top-0 z-30 backdrop-blur-md bg-black/40 border-b border-white/10">
+        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white">
+            <BarChart3 className="size-5 text-emerald-400" />
+            <span className="font-bold text-sm sm:text-base">التحصيل الذكي</span>
+          </div>
+          <div className="text-white text-left leading-tight">
+            <div className="font-mono font-bold text-sm sm:text-base tabular-nums tracking-wider text-emerald-300">
+              {time}
+            </div>
+            <div className="text-[10px] sm:text-xs opacity-80 tabular-nums">{date}</div>
+          </div>
+        </div>
+      </header>
+
+      <section className="relative min-h-[calc(100vh-3.5rem)] flex flex-col items-stretch px-4 pt-6 pb-10 text-white">
+        <div className="w-full max-w-xl mx-auto mt-2">
+          <FeatureSlider />
         </div>
 
-        {!role ? (
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setRole("collector")}
-              className="flex flex-col items-center gap-2 rounded-xl border bg-card p-4 hover:bg-accent transition"
-            >
-              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <UserCog className="size-6" />
-              </div>
-              <span className="text-sm font-medium">دخول كمحصّل</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("admin")}
-              className="flex flex-col items-center gap-2 rounded-xl border bg-card p-4 hover:bg-accent transition"
-            >
-              <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <ShieldCheck className="size-6" />
-              </div>
-              <span className="text-sm font-medium">دخول كإدارة</span>
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="text-center text-sm font-medium text-primary">
-              {role === "admin" ? "حساب الإدارة" : "حساب المحصّل"}
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">الرقم الوظيفي</label>
-              <Input
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder="أدخل الرقم الوظيفي"
-                inputMode="numeric"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium">كلمة المرور</label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="6 أحرف على الأقل"
-              />
-            </div>
-            <div className="flex gap-2 pt-1">
+        <Button
+          onClick={openLogin}
+          size="lg"
+          className="mt-8 mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 gap-2 shadow-lg ring-1 ring-emerald-300/40"
+        >
+          <LogIn className="size-4" />
+          ابدأ الآن — تسجيل الدخول
+        </Button>
+
+      </section>
+
+      <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
+        <DialogContent
+          className="max-w-[300px] p-4 gap-2 bg-black/40 backdrop-blur-xl border-white/15 text-white shadow-2xl"
+          dir="rtl"
+        >
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-center text-sm text-white">
+              {role === "admin" ? "دخول الإدارة" : "تسجيل دخول المحصّل"}
+            </DialogTitle>
+            <DialogDescription className="text-center text-[10px] text-white/60">
+              أدخل بياناتك للمتابعة
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-2 pt-1">
+            <Input
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              inputMode="numeric"
+              autoFocus
+              className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40"
+            />
+            <Input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
+              value={password}
+              onChange={(e) => setPassword(e.target.value.replace(/\D/g, ""))}
+              className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40"
+            />
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                type="submit"
+                disabled={busy}
+                className="flex-1 h-9 bg-emerald-500 hover:bg-emerald-600 text-white"
+              >
+                {busy ? "..." : "دخول"}
+              </Button>
               <Button
                 type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => { setRole(null); setEmployeeId(""); setPassword(""); }}
-                disabled={busy}
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setRole((r) => (r === "admin" ? "collector" : "admin"));
+                  setEmployeeId("");
+                  setPassword("");
+                }}
+                className="h-9 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10 gap-1"
+                title="دخول الإدارة"
               >
-                رجوع
-              </Button>
-              <Button type="submit" className="flex-1" disabled={busy}>
-                {busy ? "..." : mode === "signup" ? "إنشاء" : "دخول"}
+                <ShieldCheck className="size-3.5" />
+                {role === "admin" ? "محصّل" : "إدارة"}
               </Button>
             </div>
-            <button
-              type="button"
-              className="w-full text-xs text-primary hover:underline pt-1"
-              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            >
-              {mode === "signin" ? "أول مرة؟ إنشاء حساب جديد" : "لدي حساب — تسجيل الدخول"}
-            </button>
           </form>
-        )}
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+const SLIDES: string[] = [slide1, slide2, slide3, slide4, slide5, slide6];
+
+function FeatureSlider() {
+  const [idx, setIdx] = useState(0);
+  const [prev, setPrev] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => {
+      setIdx((i) => {
+        setPrev(i);
+        return (i + 1) % SLIDES.length;
+      });
+    }, 3500);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="relative">
+      <div className="absolute -inset-4 -z-10 bg-emerald-500/10 blur-3xl rounded-[2rem]" />
+      <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-emerald-400/20">
+        {SLIDES.map((src, i) => {
+          const active = i === idx;
+          const wasPrev = i === prev && i !== idx;
+          return (
+            <img
+              key={i}
+              src={src}
+              alt={`شريحة ${i + 1}`}
+              loading={i === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 h-full w-full object-cover transition-all duration-[900ms] ease-out will-change-transform ${
+                active
+                  ? "opacity-100 scale-100 translate-x-0 blur-0"
+                  : wasPrev
+                  ? "opacity-0 scale-105 -translate-x-6 blur-md pointer-events-none"
+                  : "opacity-0 scale-110 translate-x-6 blur-md pointer-events-none"
+              }`}
+            />
+          );
+        })}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-1.5">
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => { setPrev(idx); setIdx(i); }}
+            aria-label={`الشريحة ${i + 1}`}
+            className={`h-1.5 rounded-full transition-all duration-500 ${
+              i === idx ? "w-8 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" : "w-1.5 bg-white/30 hover:bg-white/50"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+

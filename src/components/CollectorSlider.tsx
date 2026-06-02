@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { User, IdCard, Clock, Target, Users, Wallet } from "lucide-react";
-import { getSession } from "@/components/LoginGate";
+import { Clock, Target, Users, Wallet } from "lucide-react";
 
 const TARGET = 350000;
 
@@ -32,9 +31,6 @@ export function CollectorSlider({
   walletTotal: number;
 }) {
   const now = useNow();
-  const session = getSession();
-  const collectorName = session?.name || "—";
-  const employeeId = session?.employeeId || "—";
   const eom = endOfMonth(now);
   const diff = Math.max(0, eom.getTime() - now.getTime());
   const days = Math.floor(diff / 86400000);
@@ -48,23 +44,13 @@ export function CollectorSlider({
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
       <div className="aspect-square w-full p-5 flex flex-col justify-between gap-3">
-        {/* Collector */}
-        <div className="flex items-center gap-3">
-          <div className="size-11 rounded-full bg-primary-foreground/15 grid place-items-center shrink-0">
-            <User className="size-6" />
+        {/* Date */}
+        <div className="flex items-center justify-between gap-2 text-[11px] opacity-90">
+          <div className="font-bold text-sm">
+            {now.toLocaleDateString("ar-SA-u-ca-gregory", { weekday: "long" })}
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-base font-bold leading-tight truncate">{collectorName}</div>
-            <div className="flex items-center gap-1 text-[11px] opacity-85 mt-0.5">
-              <IdCard className="size-3.5" />
-              <span className="tabular-nums">{employeeId}</span>
-            </div>
-          </div>
-          <div className="text-left text-[10px] leading-tight opacity-90 shrink-0">
-            <div className="font-bold text-[11px]">
-              {now.toLocaleDateString("ar-SA-u-ca-gregory", { weekday: "long" })}
-            </div>
-            <div className="tabular-nums mt-0.5">
+          <div className="text-left leading-tight">
+            <div className="tabular-nums">
               {now.toLocaleDateString("ar-SA-u-ca-islamic-umalqura", {
                 day: "numeric",
                 month: "long",

@@ -6,11 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock, Scale, FileText, RefreshCw, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "@/lib/wallet-store";
 import collectors from "@/data/collectors.json";
 import { formatCurrency, type Customer } from "@/lib/wallet-types";
+import { CasesUploadPanel, RequestsUploadPanel, WalletChangesPanel } from "@/components/AdminPanels";
+import MappingReview, { loadDefaultMapping } from "@/components/MappingReview";
+import { detectMapping } from "@/lib/mapping-engine";
+import { canonicalToCustomer } from "@/lib/canonical-to-customer";
+import { clearSession } from "@/components/LoginGate";
 
 type Collector = { supervisor: string; collector: string; employeeId: string };
 const BASE_COLLECTORS = collectors as Collector[];
@@ -38,7 +43,7 @@ type ThirdPartyReq = {
   body: string;
 };
 
-type Tab = "home" | "wallet" | "members" | "requests";
+type Tab = "home" | "wallet" | "cases" | "requests-file" | "changes" | "members" | "requests";
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>("home");
@@ -61,16 +66,31 @@ export default function AdminDashboard() {
             <p className="text-xs text-muted-foreground truncate">
               {tab === "home" && "اختر الإجراء المطلوب"}
               {tab === "wallet" && "إضافة المحفظة كاملة"}
+              {tab === "cases" && "إضافة ملف القضايا"}
+              {tab === "requests-file" && "إضافة ملف الطلبات"}
+              {tab === "changes" && "إضافة تغييرات على المحفظة الحالية"}
               {tab === "members" && "إضافة أعضاء في القروب"}
               {tab === "requests" && "طلبات إرسال العملاء للطرف الثالث"}
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { clearSession(); toast.success("تم تسجيل الخروج"); }}
+            className="gap-1.5 shrink-0"
+          >
+            <LogOut className="size-4" />
+            <span className="hidden sm:inline">تسجيل خروج</span>
+          </Button>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-4 py-5 space-y-4">
         {tab === "home" && <HomeGrid onSelect={setTab} />}
         {tab === "wallet" && <WalletUploadPanel />}
+        {tab === "cases" && <CasesUploadPanel />}
+        {tab === "requests-file" && <RequestsUploadPanel />}
+        {tab === "changes" && <WalletChangesPanel />}
         {tab === "members" && <MembersPanel />}
         {tab === "requests" && <RequestsPanel />}
       </main>
@@ -88,6 +108,9 @@ function HomeGrid({ onSelect }: { onSelect: (t: Tab) => void }) {
 
   const tiles: { id: Tab; title: string; desc: string; icon: any; badge?: number }[] = [
     { id: "wallet", title: "إضافة المحفظة كاملة", desc: "رفع ملف Excel لاستبدال بيانات المحفظة", icon: Upload },
+    { id: "cases", title: "إضافة ملف القضايا", desc: "رفع ملف القضايا وربطه بالمحفظة", icon: Scale },
+    { id: "requests-file", title: "إضافة ملف الطلبات", desc: "رفع ملف الطلبات (إعفاء/جدولة)", icon: FileText },
+    { id: "changes", title: "إضافة تغييرات على المحفظة الحالية", desc: "استبعاد / تدوير / تحديث الحسابات", icon: RefreshCw },
     { id: "members", title: "إضافة أعضاء في القروب", desc: "تفعيل المحصلين للوصول إلى القروب", icon: UserPlus },
     { id: "requests", title: "استقبال طلبات الطرف الثالث", desc: "مراجعة الطلبات المقدمة من المحصلين", icon: Inbox, badge: pendingCount },
   ];
@@ -116,10 +139,120 @@ function HomeGrid({ onSelect }: { onSelect: (t: Tab) => void }) {
   );
 }
 
+// ---------- Smart column mapping ----------
+function normHeader(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/[\u064B-\u0652]/g, "") // Arabic diacritics
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[_\-\.\/\\]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const FIELD_ALIASES: Record<string, string[]> = {
+  "رقم الحساب": ["رقم الحساب", "account", "account number", "acc no", "رقم العقد", "contract", "contract number"],
+  "المبلغ": ["المبلغ", "amount", "balance", "رصيد", "مبلغ المديونيه", "مبلغ المديونية", "اجمالي المديونيه", "اجمالي المديونية", "outstanding", "total due"],
+  "الاكشن": ["الاكشن", "action", "حاله المتابعه", "حالة المتابعة", "متابعه", "status"],
+  "التثبيت": ["التثبيت", "تثبيت", "fix"],
+  "المنتج": ["المنتج", "product", "نوع المنتج", "type"],
+  "عمر الدين": ["عمر الدين", "debt age", "age"],
+  "رقم الهوية": ["رقم الهويه", "رقم الهوية", "id", "national id", "هويه", "هوية"],
+  "اسم العميل": ["اسم العميل", "customer", "customer name", "client name", "name", "العميل"],
+  "رقم الجوال": ["رقم الجوال", "جوال", "mobile", "phone", "tel", "تلفون", "موبايل"],
+  "عميل رواتب": ["عميل رواتب", "راتب", "salary", "salary customer"],
+  "عميل متوفي": ["عميل متوفي", "متوفي", "متوفى", "deceased", "وفاه", "وفاة"],
+  "رقم القضية": ["رقم القضيه", "رقم القضية", "case", "case number"],
+  "رقم الطلب في نظام سيبل": ["رقم الطلب في نظام سيبل", "سيبل", "siebel", "siebel id"],
+  "طلب الطلب": ["طلب الطلب", "وعد السداد", "promise", "promise to pay", "ptp", "تاريخ وعد السداد", "وعد"],
+  "ارصده محجوزه": ["ارصده محجوزه", "ارصدة محجوزة", "held", "blocked balance"],
+};
+
+const AGENT_ALIASES = [
+  "id agent", "agent id", "agent employee id", "agent_employee_id",
+  "الرقم الوظيفي", "الرقم الوظيفى", "رقم الموظف", "رقم المحصل",
+  "employee id", "employee number", "موظف", "محصل id",
+];
+const AGENT_NAME_ALIASES = ["اسم المحصل", "المحصل", "collector", "agent", "agent name"];
+
+function buildHeaderMap(headers: string[]) {
+  const normed = headers.map((h) => ({ orig: h, n: normHeader(h) }));
+  const find = (aliases: string[]): string | null => {
+    const set = aliases.map(normHeader);
+    const exact = normed.find((h) => set.includes(h.n));
+    if (exact) return exact.orig;
+    const partial = normed.find((h) => set.some((a) => h.n.includes(a) || a.includes(h.n)));
+    return partial?.orig || null;
+  };
+  const map: Record<string, string | null> = {};
+  for (const k of Object.keys(FIELD_ALIASES)) map[k] = find(FIELD_ALIASES[k]);
+  map["__agent"] = find(AGENT_ALIASES);
+  map["__agentName"] = find(AGENT_NAME_ALIASES);
+  return map;
+}
+
+function rowToCustomerSmart(row: any, hmap: Record<string, string | null>): Customer & { ID_AGENT?: string | null } {
+  const out: any = {};
+  for (const k of Object.keys(FIELD_ALIASES)) {
+    const src = hmap[k];
+    let v = src ? row[src] : null;
+    if (v != null && ["رقم الحساب", "رقم الهوية", "رقم القضية", "رقم الجوال", "رقم الطلب في نظام سيبل"].includes(k)) {
+      const num = Number(v);
+      v = Number.isFinite(num) && !isNaN(num) ? String(Math.trunc(num)) : String(v);
+    }
+    if (k === "المبلغ" && v != null) {
+      const num = Number(String(v).replace(/,/g, ""));
+      v = isNaN(num) ? null : num;
+    }
+    out[k] = v ?? null;
+  }
+  const agentRaw = hmap["__agent"] ? row[hmap["__agent"]] : null;
+  if (agentRaw != null && String(agentRaw).trim() !== "") {
+    const n = Number(agentRaw);
+    out["ID AGENT"] = Number.isFinite(n) && !isNaN(n) ? String(Math.trunc(n)) : String(agentRaw).trim();
+  }
+  return out;
+}
+
+function summarize(rows: any[]) {
+  const isYes = (v: any) => {
+    if (v == null) return false;
+    const s = String(v).trim().toLowerCase();
+    if (!s) return false;
+    return !["no", "0", "false", "لا", "غير", "-"].includes(s);
+  };
+  const total = rows.reduce((s, r) => s + (Number(r["المبلغ"]) || 0), 0);
+  const agents = new Set(rows.map((r) => r["ID AGENT"]).filter(Boolean));
+  const salary = rows.filter((r) => isYes(r["عميل رواتب"])).length;
+  const death = rows.filter((r) => isYes(r["عميل متوفي"])).length;
+  const promises = rows.filter((r) => r["طلب الطلب"]).length;
+  const products: Record<string, number> = {};
+  for (const r of rows) {
+    const p = String(r["المنتج"] || "").toUpperCase();
+    if (!p) continue;
+    let key = p;
+    if (p.includes("PF") || p.includes("شخص")) key = "PF";
+    else if (p.includes("AL") || p.includes("سياره") || p.includes("سيارة")) key = "AL";
+    else if (p.includes("CC") || p.includes("ائتم") || p.includes("بطاق")) key = "CC";
+    products[key] = (products[key] || 0) + 1;
+  }
+  return { count: rows.length, total, agents: agents.size, salary, death, promises, products };
+}
+
 function WalletUploadPanel() {
   const { meta, replaceData, hydrated } = useWallet();
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<{ rows: Customer[]; fileName: string; summary: ReturnType<typeof summarize>; headersDetected: Record<string, string | null> } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [reviewState, setReviewState] = useState<null | {
+    fileName: string;
+    headers: string[];
+    rawRows: Record<string, unknown>[];
+    detection: ReturnType<typeof detectMapping>;
+  }>(null);
 
   const handleUpload = async (file: File) => {
     setBusy(true);
@@ -127,21 +260,50 @@ function WalletUploadPanel() {
       const buf = await file.arrayBuffer();
       const wb = XLSX.read(buf, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Customer>(sheet, { defval: null });
-      const cleaned = rows.map((r: any) => {
-        const out: any = { ...r };
-        ["رقم الحساب", "رقم الهوية", "رقم القضية", "رقم الجوال", "رقم الطلب في نظام سيبل"].forEach((k) => {
-          if (out[k] != null) {
-            const num = Number(out[k]);
-            out[k] = Number.isFinite(num) && !isNaN(num) ? String(Math.trunc(num)) : String(out[k]);
+      const raw = XLSX.utils.sheet_to_json<any>(sheet, { defval: null });
+      if (raw.length === 0) { toast.error("الملف فارغ"); return; }
+      const headers = Object.keys(raw[0] || {});
+      // Try saved default mapping first; fall back to auto-detection
+      const savedDefault = await loadDefaultMapping("wallet");
+      const detection = detectMapping(headers, raw);
+      if (savedDefault) {
+        // Overlay saved mapping over detection (saved wins for mapped fields that still exist)
+        for (const m of detection.matches) {
+          const sv = savedDefault[m.field];
+          if (sv && headers.includes(sv)) {
+            m.sourceColumn = sv;
+            m.confidence = 1;
           }
-        });
-        return out as Customer;
-      });
-      replaceData(cleaned, file.name);
-      toast.success(`تم رفع ${cleaned.length} عميل من ${file.name}`);
+        }
+      }
+      setReviewState({ fileName: file.name, headers, rawRows: raw, detection });
+      toast.success(`تم تحليل ${raw.length} صف. راجع ربط الأعمدة ثم اعتمد.`);
     } catch (e: any) {
       toast.error("تعذر قراءة الملف: " + (e?.message || ""));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Called from MappingReview after user confirms the field↔column mapping
+  const handleMappingConfirmed = async (canonicalRows: any[], mapping: Record<string, string | null>) => {
+    const customers = canonicalRows.map(canonicalToCustomer) as Customer[];
+    const summary = summarize(customers);
+    const headersDetected: Record<string, string | null> = { ...mapping, __agent: mapping["الرقم الوظيفي للمحصل"] || null };
+    setPreview({ rows: customers, fileName: reviewState!.fileName, summary, headersDetected });
+    setReviewState(null);
+  };
+
+  const handleConfirm = async () => {
+    if (!preview) return;
+    setBusy(true);
+    try {
+      await replaceData(preview.rows, preview.fileName);
+      toast.success(`تم توزيع ${preview.rows.length} حساب على ${preview.summary.agents} محصّل`);
+      setPreview(null);
+      setConfirmOpen(false);
+    } catch (e: any) {
+      toast.error("فشل الحفظ: " + (e?.message || ""));
     } finally {
       setBusy(false);
     }
@@ -150,9 +312,9 @@ function WalletUploadPanel() {
   return (
     <Card className="p-5 space-y-4">
       <div className="text-sm">
-        رفع ملف Excel جديد سيستبدل المحفظة الحالية بالكامل لجميع المستخدمين.
+        رفع ملف Excel جديد سيستبدل المحفظة الحالية بالكامل لجميع المستخدمين، ويتم توزيعها تلقائيًا حسب الرقم الوظيفي للمحصل.
       </div>
-      {hydrated && (
+      {hydrated && !preview && (
         <div className="text-xs text-muted-foreground rounded-md border p-3 space-y-1">
           <div>الملف الحالي: <span className="font-medium text-foreground">{meta.fileName}</span></div>
           <div>عدد العملاء: <span className="font-medium text-foreground tabular-nums">{meta.count}</span></div>
@@ -172,11 +334,111 @@ function WalletUploadPanel() {
           e.target.value = "";
         }}
       />
-      <Button onClick={() => fileRef.current?.click()} disabled={busy} className="w-full h-11">
-        <Upload className="size-4 ml-2" />
-        {busy ? "جاري الرفع…" : "اختيار ملف Excel ورفعه"}
-      </Button>
+      {!preview && (
+        <Button onClick={() => fileRef.current?.click()} disabled={busy} className="w-full h-11">
+          <Upload className="size-4 ml-2" />
+          {busy ? "جاري التحليل…" : "اختيار ملف Excel"}
+        </Button>
+      )}
+
+      {preview && (
+        <div className="space-y-3">
+          <div className="text-sm font-semibold">ملخص المحفظة — {preview.fileName}</div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <StatBox label="إجمالي الحسابات" value={preview.summary.count.toLocaleString("en-US")} />
+            <StatBox label="إجمالي المحفظة" value={formatCurrency(preview.summary.total)} />
+            <StatBox label="عدد المحصلين" value={String(preview.summary.agents)} />
+            <StatBox label="وعود السداد" value={String(preview.summary.promises)} />
+            <StatBox label="عملاء رواتب" value={String(preview.summary.salary)} />
+            <StatBox label="عملاء متوفين" value={String(preview.summary.death)} />
+          </div>
+          {Object.keys(preview.summary.products).length > 0 && (
+            <div className="rounded-md border p-2 text-xs">
+              <div className="font-semibold mb-1">توزيع المنتجات</div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(preview.summary.products).map(([k, v]) => (
+                  <Badge key={k} variant="secondary" className="tabular-nums">{k}: {v}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {!preview.headersDetected["__agent"] && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-800 p-2 text-[11px]">
+              تحذير: لم يتم العثور على عمود الرقم الوظيفي للمحصل في الملف. لن يتم ربط الحسابات بالمحصلين.
+            </div>
+          )}
+          <div className="rounded-md border max-h-56 overflow-auto">
+            <table className="w-full text-[11px]">
+              <thead className="bg-muted sticky top-0">
+                <tr>
+                  <th className="p-1 text-right">العميل</th>
+                  <th className="p-1 text-right">الهوية</th>
+                  <th className="p-1 text-right">المنتج</th>
+                  <th className="p-1 text-right">المبلغ</th>
+                  <th className="p-1 text-right">المحصل</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.slice(0, 20).map((r: any, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="p-1 truncate max-w-[120px]">{r["اسم العميل"] || "—"}</td>
+                    <td className="p-1 tabular-nums">{r["رقم الهوية"] || "—"}</td>
+                    <td className="p-1">{r["المنتج"] || "—"}</td>
+                    <td className="p-1 tabular-nums">{formatCurrency(r["المبلغ"])}</td>
+                    <td className="p-1 tabular-nums">{r["ID AGENT"] || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={() => setPreview(null)} disabled={busy}>إلغاء</Button>
+            <Button onClick={() => setConfirmOpen(true)} disabled={busy}>اعتماد التوزيع</Button>
+          </div>
+        </div>
+      )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent dir="rtl" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-right">تأكيد توزيع المحفظة</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm leading-relaxed">
+            هل تريد تأكيد توزيع هذه المحفظة على جميع المحصلين؟
+            <br />
+            بعد الموافقة سيتم ربط الحسابات بكل محصل حسب رقمه الوظيفي، وستظهر البيانات تلقائيًا في لوحة تحكم كل محصل عند تسجيل دخوله.
+          </p>
+          <div className="grid grid-cols-2 gap-2 pt-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={busy}>إلغاء</Button>
+            <Button onClick={handleConfirm} disabled={busy}>
+              {busy ? "جاري الحفظ…" : "موافق وتوزيع المحفظة"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {reviewState && (
+        <MappingReview
+          open={!!reviewState}
+          onOpenChange={(v) => { if (!v) setReviewState(null); }}
+          fileKind="wallet"
+          fileName={reviewState.fileName}
+          headers={reviewState.headers}
+          rows={reviewState.rawRows}
+          detection={reviewState.detection}
+          onConfirm={handleMappingConfirmed}
+        />
+      )}
     </Card>
+  );
+}
+
+function StatBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border p-2">
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+      <div className="text-sm font-bold tabular-nums">{value}</div>
+    </div>
   );
 }
 

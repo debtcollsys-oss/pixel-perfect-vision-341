@@ -4,7 +4,6 @@ import WalletApp from "@/components/WalletApp";
 import AdminDashboard from "@/components/AdminDashboard";
 import LoginGate, { getSession, type Session } from "@/components/LoginGate";
 import { Toaster } from "@/components/ui/sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -22,11 +21,7 @@ function RoleSwitch() {
     const tick = () => setSession(getSession());
     tick();
     const id = setInterval(tick, 300);
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => tick());
-    return () => {
-      clearInterval(id);
-      subscription.unsubscribe();
-    };
+    return () => clearInterval(id);
   }, []);
   if (session?.role === "admin") return <AdminDashboard />;
   return <WalletApp />;

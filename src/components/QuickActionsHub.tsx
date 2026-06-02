@@ -177,10 +177,9 @@ function RequestsDialog({
   onClose: () => void;
   kind: "exemption" | "reschedule";
 }) {
-  const items = useFilteredCustomers((c, st) => {
-    const v = String((st?.edits?.["طلب الطلب"] ?? c["طلب الطلب"]) ?? "");
-    if (kind === "exemption") return /إعفاء|اعفاء/.test(v);
-    return /جدول/.test(v);
+  const items = useFilteredCustomers((c) => {
+    const col = kind === "exemption" ? c["طلب اعفاء"] : c["طلب جدولة"];
+    return col != null && String(col).trim() !== "";
   });
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -205,20 +204,34 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
   const { customers } = useWallet();
   const cols = [
     "رقم الحساب",
-    "اسم العميل",
-    "رقم الهوية",
-    "رقم الجوال",
-    "المبلغ",
-    "المنتج",
-    "عمر الدين",
     "الاكشن",
-    "التثبيت",
-    "عميل رواتب",
+    "تيم جدة / تيم الرياض",
+    "الرقم الوظيفي للمحصل",
+    "اسم المحصل",
+    "الرقم الوظيفي للمشرف",
+    "اسم المشرف",
+    "مبلغ المديونية",
+    "عدد ايام التعثر",
+    "نوع المنتج",
+    "تاريخ التجميد",
+    "رقم الهوية",
+    "اسم العميل",
+    "رقم الجوال",
     "عميل متوفي",
-    "رقم القضية",
-    "رقم الطلب في نظام سيبل",
-    "طلب الطلب",
-    "ارصده محجوزه",
+    "عميل رواتب",
+    "CaseNo. رقم القضية",
+    "اسم المحكمة",
+    "طلب اعفاء",
+    "مرجع الحجز التنفيذي",
+    "ارصدة محجوزه",
+    "طلب جدولة",
+    "رقم الطلب",
+    "تصنيف الطلب",
+    "حالة الطلب الفرعية",
+    "عدد الطلبات على رقم هوية العميل",
+    "تاريخ فتح الطلب",
+    "الوصف",
+    "التثبيت",
   ] as const;
 
   return (
@@ -247,7 +260,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                     <td key={c} className="border px-2 py-1 whitespace-nowrap tabular-nums">
                       {row[c as keyof Customer] == null || row[c as keyof Customer] === ""
                         ? "—"
-                        : c === "المبلغ" || c === "ارصده محجوزه"
+                        : c === "مبلغ المديونية"
                           ? formatCurrency(row[c as keyof Customer] as number)
                           : String(row[c as keyof Customer])}
                     </td>
