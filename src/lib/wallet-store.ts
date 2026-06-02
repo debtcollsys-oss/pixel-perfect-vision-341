@@ -2,26 +2,49 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Customer, CustomerState, ContactLog } from "./wallet-types";
 import { customerKey } from "./wallet-types";
+import { getSession } from "@/components/LoginGate";
 import defaultData from "@/data/wallet.json";
 
 type Meta = { fileName?: string; uploadedAt?: string; count: number };
 
 const ARABIC_FIELDS: (keyof Customer)[] = [
+  // ---- Official portfolio columns ----
   "رقم الحساب",
-  "المبلغ",
   "الاكشن",
-  "التثبيت",
-  "المنتج",
-  "عمر الدين",
+  "تيم جدة / تيم الرياض",
+  "الرقم الوظيفي للمحصل",
+  "اسم المحصل",
+  "الرقم الوظيفي للمشرف",
+  "اسم المشرف",
+  "مبلغ المديونية",
+  "عدد ايام التعثر",
+  "نوع المنتج",
+  "تاريخ التجميد",
   "رقم الهوية",
   "اسم العميل",
   "رقم الجوال",
-  "عميل رواتب",
   "عميل متوفي",
+  "عميل رواتب",
+  "CaseNo. رقم القضية",
+  "اسم المحكمة",
+  "طلب اعفاء",
+  "مرجع الحجز التنفيذي",
+  "ارصدة محجوزه",
+  "طلب جدولة",
+  "رقم الطلب",
+  "تصنيف الطلب",
+  "حالة الطلب الفرعية",
+  "عدد الطلبات على رقم هوية العميل",
+  "تاريخ فتح الطلب",
+  "الوصف",
+  "التثبيت",
+  // ---- Legacy mirrors ----
+  "المبلغ",
+  "المنتج",
+  "عمر الدين",
   "رقم القضية",
-  "رقم الطلب في نظام سيبل",
-  "طلب الطلب",
   "ارصده محجوزه",
+  "رقم الطلب في نظام سيبل",
 ];
 
 function rowToCustomer(row: any): Customer {
@@ -37,10 +60,10 @@ function customerToDbRow(c: Customer, importedBy: string | null) {
     if (v == null) return false;
     const s = String(v).trim().toLowerCase();
     if (!s) return false;
-    return !["no", "0", "false", "لا", "غير", "-"].includes(s);
+    return !["no", "0", "false", "لا", "غير", "-", ""].includes(s);
   };
   const key = customerKey(c);
-  const amt = c["المبلغ"];
+  const amt = c["مبلغ المديونية"] ?? c["المبلغ"];
   return {
     customer_key: String(key),
     account_number: c["رقم الحساب"] ? String(c["رقم الحساب"]) : null,
@@ -48,13 +71,17 @@ function customerToDbRow(c: Customer, importedBy: string | null) {
     customer_name: c["اسم العميل"] ?? null,
     phone: c["رقم الجوال"] ? String(c["رقم الجوال"]) : null,
     amount: amt != null && !isNaN(Number(amt)) ? Number(amt) : null,
-    product: c["المنتج"] ?? null,
-    debt_age: c["عمر الدين"] ?? null,
+    product: (c["نوع المنتج"] ?? c["المنتج"]) ?? null,
+    debt_age: (c["عدد ايام التعثر"] ?? c["عمر الدين"]) as any ?? null,
     action: c["الاكشن"] ?? null,
     installment: c["التثبيت"] ?? null,
     is_salary: isYes(c["عميل رواتب"]),
     is_deceased: isYes(c["عميل متوفي"]),
-    agent_employee_id: (c as any)["ID AGENT"] ?? (c as any)["agent_employee_id"] ?? null,
+    agent_employee_id:
+      (c as any)["ID AGENT"] ??
+      c["الرقم الوظيفي للمحصل"] ??
+      (c as any)["agent_employee_id"] ??
+      null,
     raw: c,
     imported_by: importedBy,
   };
@@ -66,11 +93,17 @@ export function useWallet() {
   const [hydrated, setHydrated] = useState(false);
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
+    const session = getSession();
+    let query = supabase
       .from("customers")
       .select("*")
       .order("amount", { ascending: false })
       .limit(50000);
+    if (session?.role === "collector") {
+      // Collector sees ONLY accounts assigned to their employee id
+      query = query.eq("agent_employee_id", session.employeeId);
+    }
+    const { data, error } = await query;
     if (error) {
       console.error("load customers", error);
       setCustomers([]);
@@ -98,8 +131,7 @@ export function useWallet() {
 
   const replaceData = useCallback(
     async (next: Customer[], fileName?: string) => {
-      const { data: userData } = await supabase.auth.getUser();
-      const uid = userData.user?.id ?? null;
+      const uid = null;
       // Delete all existing then insert in chunks
       const { error: delErr } = await supabase
         .from("customers")
@@ -229,12 +261,11 @@ export function useCustomerStates() {
       if (patch.noteLog && patch.noteLog.length > (cur.noteLog?.length || 0)) {
         const newOnes = patch.noteLog.slice(cur.noteLog?.length || 0);
         void (async () => {
-          const { data: u } = await supabase.auth.getUser();
           for (const n of newOnes) {
             await supabase.from("customer_notes").insert({
               customer_key: key,
               text: n.text,
-              created_by: u.user?.id ?? null,
+              created_by: null,
             });
           }
         })();
@@ -256,12 +287,11 @@ export function useCustomerStates() {
         },
       };
       void (async () => {
-        const { data: u } = await supabase.auth.getUser();
         await supabase.from("contact_logs").insert({
           customer_key: key,
           channel: log.channel,
           note: log.note ?? null,
-          created_by: u.user?.id ?? null,
+          created_by: null,
         });
         await supabase
           .from("customer_states")

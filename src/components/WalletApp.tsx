@@ -18,6 +18,7 @@ import { loadPolicies, loadActiveId, computeDebtAge, ageBucketFor, getDiscountRa
 import { ThirdPartyDialog } from "@/components/ThirdPartyDialog";
 import { CollectorSlider } from "@/components/CollectorSlider";
 import { QuickActionsHub } from "@/components/QuickActionsHub";
+import CollectorInfoCard from "@/components/CollectorInfoCard";
 import { Send } from "lucide-react";
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -51,7 +52,10 @@ export default function WalletApp() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const products = useMemo(
-    () => Array.from(new Set(customers.map((c) => c["المنتج"]).filter(Boolean))) as string[],
+    () =>
+      Array.from(
+        new Set(customers.map((c) => c["نوع المنتج"] ?? c["المنتج"]).filter(Boolean)),
+      ) as string[],
     [customers],
   );
   const isYes = (v: any) => {
@@ -60,9 +64,14 @@ export default function WalletApp() {
     if (!s) return false;
     return !["no", "0", "false", "لا", "غير", "-"].includes(s);
   };
+  const nonEmpty = (v: any) => v != null && String(v).trim() !== "";
   const hasRequest = (c: Customer) =>
-    (c["رقم الطلب في نظام سيبل"] != null && String(c["رقم الطلب في نظام سيبل"]).trim() !== "") ||
-    (c["طلب الطلب"] != null && String(c["طلب الطلب"]).trim() !== "");
+    nonEmpty(c["طلب اعفاء"]) ||
+    nonEmpty(c["طلب جدولة"]) ||
+    nonEmpty(c["رقم الطلب"]) ||
+    nonEmpty(c["تصنيف الطلب"]) ||
+    nonEmpty(c["حالة الطلب الفرعية"]) ||
+    nonEmpty(c["رقم الطلب في نظام سيبل"]);
 
   const filtered = useMemo(() => {
     const term = q.trim();
@@ -70,7 +79,7 @@ export default function WalletApp() {
       .filter((c) => {
         if (filterValue !== "all") {
           if (filterType === "product") {
-            const p = String(c["المنتج"] ?? "").toUpperCase();
+            const p = String(c["نوع المنتج"] ?? c["المنتج"] ?? "").toUpperCase();
             if (!p.includes(filterValue)) return false;
           } else if (filterType === "salary") {
             const yes = isYes(c["عميل رواتب"]);
@@ -98,13 +107,20 @@ export default function WalletApp() {
         }
         return true;
       })
-      .sort((a, b) => (Number(b["المبلغ"]) || 0) - (Number(a["المبلغ"]) || 0));
+      .sort(
+        (a, b) =>
+          (Number(b["مبلغ المديونية"] ?? b["المبلغ"]) || 0) -
+          (Number(a["مبلغ المديونية"] ?? a["المبلغ"]) || 0),
+      );
   }, [customers, q, searchBy, filterType, filterValue]);
 
   const stats = useMemo(() => {
-    const total = customers.reduce((s, c) => s + (Number(c["المبلغ"]) || 0), 0);
-    const death = customers.filter((c) => c["عميل متوفي"]).length;
-    const salary = customers.filter((c) => c["عميل رواتب"]).length;
+    const total = customers.reduce(
+      (s, c) => s + (Number(c["مبلغ المديونية"] ?? c["المبلغ"]) || 0),
+      0,
+    );
+    const death = customers.filter((c) => isYes(c["عميل متوفي"])).length;
+    const salary = customers.filter((c) => isYes(c["عميل رواتب"])).length;
     const promise = customers.filter((c) => {
       const k = customerKey(c);
       const act = (states[k]?.edits?.["الاكشن"] ?? c["الاكشن"]) as string | undefined;
@@ -214,35 +230,15 @@ export default function WalletApp() {
                 <span>ملف القضايا</span>
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 h-12"
-              onClick={() => {
-                setMenuOpen(false);
-                fileRef.current?.click();
-              }}
-            >
-              <Upload className="size-5" />
-              <span>رفع ملف Excel</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2 h-12"
-              onClick={() => {
-                if (confirm("استعادة بيانات المحفظة الأصلية؟")) {
-                  resetData();
-                  setMenuOpen(false);
-                }
-              }}
-            >
-              <RotateCcw className="size-5" />
-              <span>استعادة الافتراضي</span>
-            </Button>
+            {/* رفع الملفات حصراً من لوحة الإدارة — تم إخفاؤها للمحصل */}
           </div>
         </SheetContent>
       </Sheet>
 
       <main className="mx-auto max-w-7xl px-4 py-5 space-y-5">
+        {/* بطاقة بيانات المحصل */}
+        <CollectorInfoCard />
+
         {/* Collector slider */}
         <section className="max-w-sm mx-auto space-y-4">
           <CollectorSlider collected={totalCollected} accountsCount={stats.count} walletTotal={stats.total} />
@@ -342,9 +338,8 @@ export default function WalletApp() {
           {filtered.map((c) => {
             const k = customerKey(c);
             const st = states[k];
-            const req = String((st?.edits?.["طلب الطلب"] ?? c["طلب الطلب"]) ?? "");
-            const hasExemption = /إعفاء|اعفاء/.test(req);
-            const hasReschedule = /جدول/.test(req);
+            const hasExemption = nonEmpty(c["طلب اعفاء"]);
+            const hasReschedule = nonEmpty(c["طلب جدولة"]);
             return (
               <CustomerRow
                 key={k}
