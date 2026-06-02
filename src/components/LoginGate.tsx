@@ -143,39 +143,48 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   const date = now ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) : "";
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden" dir="rtl">
-      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#27433e] via-[#1f3a36] to-[#152a27]" />
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#0f2622]" dir="rtl">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-b from-[#13312c] via-[#0f2622] to-[#081a17]" />
 
-      <header className="sticky top-0 z-30 backdrop-blur-md bg-black/40 border-b border-white/10">
-        <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-30 backdrop-blur-md bg-black/30 border-b border-white/5">
+        <div className="max-w-3xl mx-auto px-4 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white">
-            <BarChart3 className="size-5 text-emerald-400" />
-            <span className="font-bold text-sm sm:text-base">التحصيل الذكي</span>
+            <BarChart3 className="size-4 text-emerald-400" />
+            <span className="font-bold text-sm">التحصيل الذكي</span>
           </div>
           <div className="text-white text-left leading-tight">
-            <div className="font-mono font-bold text-sm sm:text-base tabular-nums tracking-wider text-emerald-300">
+            <div className="font-mono font-bold text-xs tabular-nums tracking-wider text-emerald-300">
               {time}
             </div>
-            <div className="text-[10px] sm:text-xs opacity-80 tabular-nums">{date}</div>
+            <div className="text-[9px] opacity-70 tabular-nums">{date}</div>
           </div>
         </div>
       </header>
 
-      <section className="relative min-h-[calc(100vh-3.5rem)] flex flex-col items-stretch px-4 pt-6 pb-10 text-white">
-        <div className="w-full max-w-xl mx-auto mt-2">
+      <section className="relative flex flex-col items-stretch px-4 pt-3 pb-8 text-white">
+        <div className="w-full max-w-md mx-auto">
+          <img
+            src={heroMain}
+            alt="التحصيل الذكي"
+            className="w-full h-auto select-none"
+            draggable={false}
+          />
+        </div>
+
+        <div className="w-full max-w-md mx-auto mt-4">
           <FeatureSlider />
         </div>
 
         <Button
           onClick={openLogin}
           size="lg"
-          className="mt-8 mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 gap-2 shadow-lg ring-1 ring-emerald-300/40"
+          className="mt-6 mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-10 h-11 gap-2 shadow-lg ring-1 ring-emerald-300/40 font-bold"
         >
           <LogIn className="size-4" />
           تسجيل الدخول
         </Button>
-
       </section>
+
 
       <Dialog open={loginOpen} onOpenChange={setLoginOpen}>
         <DialogContent
