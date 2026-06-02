@@ -252,31 +252,24 @@ function FeatureSlider() {
   return (
     <div className="relative">
       <div className="absolute -inset-4 -z-10 bg-emerald-500/10 blur-3xl rounded-[2rem]" />
-      <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-emerald-400/20" dir="ltr">
-        {/* Horizontal sliding track */}
-        <div
-          className="flex h-full transition-transform duration-[900ms] ease-in-out will-change-transform"
-          style={{
-            width: `${SLIDES.length * 100}%`,
-            transform: `translateX(-${idx * (100 / SLIDES.length)}%)`,
-          }}
-        >
-          {SLIDES.map((src, i) => (
-            <div
-              key={i}
-              className="h-full shrink-0"
-              style={{ width: `${100 / SLIDES.length}%` }}
-            >
-              <img
-                src={src}
-                alt={`شريحة ${i + 1}`}
-                loading={i === 0 ? "eager" : "lazy"}
-                className="h-full w-full object-cover"
-                draggable={false}
-              />
-            </div>
-          ))}
-        </div>
+      <div
+        className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-emerald-400/20"
+        style={{ aspectRatio: "16 / 9" }}
+        dir="ltr"
+      >
+        {SLIDES.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={`شريحة ${i + 1}`}
+            loading={i === 0 ? "eager" : "lazy"}
+            draggable={false}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-in-out will-change-transform"
+            style={{
+              transform: `translateX(${(i - idx) * 100}%)`,
+            }}
+          />
+        ))}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
       </div>
       <div className="mt-3 flex items-center justify-center gap-1.5">
