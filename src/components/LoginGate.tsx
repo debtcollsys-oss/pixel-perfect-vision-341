@@ -14,7 +14,6 @@ import slide2 from "@/assets/slide-2.png";
 import slide3 from "@/assets/slide-3.png";
 import slide4 from "@/assets/slide-4.png";
 import slide5 from "@/assets/slide-5.png";
-import slide6 from "@/assets/slide-6.png";
 
 const ADMIN_USERNAME = "666666";
 const ADMIN_PASSWORD = "123456";
@@ -239,17 +238,13 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   );
 }
 
-const SLIDES: string[] = [slide1, slide2, slide3, slide4, slide5, slide6];
+const SLIDES: string[] = [slide1, slide2, slide3, slide4, slide5];
 
 function FeatureSlider() {
   const [idx, setIdx] = useState(0);
-  const [prev, setPrev] = useState(0);
   useEffect(() => {
     const t = setInterval(() => {
-      setIdx((i) => {
-        setPrev(i);
-        return (i + 1) % SLIDES.length;
-      });
+      setIdx((i) => (i + 1) % SLIDES.length);
     }, 3500);
     return () => clearInterval(t);
   }, []);
@@ -258,25 +253,29 @@ function FeatureSlider() {
     <div className="relative">
       <div className="absolute -inset-4 -z-10 bg-emerald-500/10 blur-3xl rounded-[2rem]" />
       <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-emerald-400/20">
-        {SLIDES.map((src, i) => {
-          const active = i === idx;
-          const wasPrev = i === prev && i !== idx;
-          return (
-            <img
+        {/* Horizontal sliding track (RTL-aware: slides move to the right visually) */}
+        <div
+          className="absolute inset-0 flex h-full transition-transform duration-[900ms] ease-in-out will-change-transform"
+          style={{
+            width: `${SLIDES.length * 100}%`,
+            transform: `translateX(${idx * (100 / SLIDES.length)}%)`,
+          }}
+        >
+          {SLIDES.map((src, i) => (
+            <div
               key={i}
-              src={src}
-              alt={`شريحة ${i + 1}`}
-              loading={i === 0 ? "eager" : "lazy"}
-              className={`absolute inset-0 h-full w-full object-cover transition-all duration-[900ms] ease-out will-change-transform ${
-                active
-                  ? "opacity-100 scale-100 translate-x-0 blur-0"
-                  : wasPrev
-                  ? "opacity-0 scale-105 -translate-x-6 blur-md pointer-events-none"
-                  : "opacity-0 scale-110 translate-x-6 blur-md pointer-events-none"
-              }`}
-            />
-          );
-        })}
+              className="h-full shrink-0"
+              style={{ width: `${100 / SLIDES.length}%` }}
+            >
+              <img
+                src={src}
+                alt={`شريحة ${i + 1}`}
+                loading={i === 0 ? "eager" : "lazy"}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
       </div>
       <div className="mt-3 flex items-center justify-center gap-1.5">
@@ -284,7 +283,7 @@ function FeatureSlider() {
           <button
             key={i}
             type="button"
-            onClick={() => { setPrev(idx); setIdx(i); }}
+            onClick={() => setIdx(i)}
             aria-label={`الشريحة ${i + 1}`}
             className={`h-1.5 rounded-full transition-all duration-500 ${
               i === idx ? "w-8 bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" : "w-1.5 bg-white/30 hover:bg-white/50"
