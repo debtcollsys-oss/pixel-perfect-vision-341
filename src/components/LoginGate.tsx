@@ -17,7 +17,7 @@ import slide5 from "@/assets/slide-5.png";
 import slide6 from "@/assets/slide-6.png";
 
 const ADMIN_USERNAME = "666666";
-const ADMIN_PASSWORD = "654321";
+const ADMIN_PASSWORD = "123456";
 const COLLECTOR_PASSWORD = "123456";
 const STORAGE_KEY = "wallet:session";
 
