@@ -16,6 +16,8 @@ import {
 } from "@/lib/mapping-engine";
 import type { CanonicalRow } from "@/lib/canonical-schema";
 
+const db = supabase as any;
+
 export type FileKind = "wallet" | "cases" | "requests" | "changes";
 
 export type MappingReviewProps = {
@@ -55,12 +57,12 @@ export default function MappingReview({
       try {
         if (saveDefault) {
           // clear previous default
-          await supabase.from("column_mappings")
+          await db.from("column_mappings")
             .update({ is_default: false })
             .eq("file_kind", fileKind)
             .eq("is_default", true);
         }
-        await supabase.from("column_mappings").insert({
+        await db.from("column_mappings").insert({
           file_kind: fileKind,
           mapping: mapping as any,
           is_default: saveDefault,
@@ -181,7 +183,7 @@ export default function MappingReview({
 // Load saved default mapping (returns null if none)
 export async function loadDefaultMapping(fileKind: FileKind): Promise<Mapping | null> {
   try {
-    const { data } = await supabase
+    const { data } = await db
       .from("column_mappings")
       .select("mapping")
       .eq("file_kind", fileKind)
