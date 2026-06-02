@@ -255,7 +255,7 @@ function FeatureSlider() {
       <div className="relative aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl ring-1 ring-emerald-400/20" dir="ltr">
         {/* Horizontal sliding track */}
         <div
-          className="absolute inset-0 flex h-full transition-transform duration-[900ms] ease-in-out will-change-transform"
+          className="flex h-full transition-transform duration-[900ms] ease-in-out will-change-transform"
           style={{
             width: `${SLIDES.length * 100}%`,
             transform: `translateX(-${idx * (100 / SLIDES.length)}%)`,
