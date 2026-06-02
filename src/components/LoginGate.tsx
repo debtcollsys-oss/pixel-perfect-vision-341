@@ -171,7 +171,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
           className="mt-8 mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 gap-2 shadow-lg ring-1 ring-emerald-300/40"
         >
           <LogIn className="size-4" />
-          ابدأ الآن — تسجيل الدخول
+          تسجيل الدخول
         </Button>
 
       </section>
