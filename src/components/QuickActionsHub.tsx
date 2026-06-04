@@ -46,6 +46,23 @@ import {
   type Message,
 } from "@/lib/messages-store";
 
+const isPromisePred = (c: Customer, st: any) =>
+  ((st?.edits?.["الاكشن"] ?? c["الاكشن"]) === "وعد سداد");
+
+const hasReqType = (c: Customer, st: any, kind: "exemption" | "reschedule") => {
+  const reqType = String(
+    st?.edits?.["نوع الطلب"] ?? (c as any)["نوع الطلب"] ?? "",
+  );
+  const col =
+    kind === "exemption"
+      ? (st?.edits?.["طلب اعفاء"] ?? c["طلب اعفاء"])
+      : (st?.edits?.["طلب جدولة"] ?? c["طلب جدولة"]);
+  const hasCol = col != null && String(col).trim() !== "";
+  if (hasCol) return true;
+  if (kind === "exemption") return /اعفاء|إعفاء/.test(reqType);
+  return /جدول/.test(reqType);
+};
+
 export function QuickActionsHub() {
   const session = getSession();
   const employeeId = session?.employeeId;
@@ -54,6 +71,20 @@ export function QuickActionsHub() {
 
   const [open, setOpen] = useState<QuickKey | null>(null);
   const [mailUnread, setMailUnread] = useState(0);
+
+  const { customers } = useWallet();
+  const { states } = useCustomerStates();
+
+  const badges = useMemo(() => {
+    let p = 0, e = 0, r = 0;
+    for (const c of customers) {
+      const st = states[customerKey(c)];
+      if (isPromisePred(c, st)) p++;
+      if (hasReqType(c, st, "exemption")) e++;
+      if (hasReqType(c, st, "reschedule")) r++;
+    }
+    return { promises: p, exemptions: e, reschedules: r };
+  }, [customers, states]);
 
   useEffect(() => {
     if (!employeeId) return setMailUnread(0);
@@ -71,6 +102,7 @@ export function QuickActionsHub() {
       <QuickActionsSlider
         groupEnabled={groupEnabled}
         mailBadge={mailUnread}
+        badges={badges}
         onSelect={(k) => {
           if (k === "group" && !groupEnabled) {
             toast.error("لم تتم إضافتك إلى القروب بعد. يرجى مراجعة الإدارة.");
@@ -155,14 +187,12 @@ function CustomersList({ items, emptyText }: { items: Customer[]; emptyText: str
 }
 
 function PromisesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const items = useFilteredCustomers(
-    (c, st) => ((st?.edits?.["الاكشن"] ?? c["الاكشن"]) === "وعد سداد"),
-  );
+  const items = useFilteredCustomers(isPromisePred);
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-right">وعود السداد</DialogTitle>
+          <DialogTitle className="text-right">وعود السداد ({items.length})</DialogTitle>
         </DialogHeader>
         <CustomersList items={items} emptyText="لا توجد وعود سداد مسجلة" />
       </DialogContent>
@@ -179,16 +209,13 @@ function RequestsDialog({
   onClose: () => void;
   kind: "exemption" | "reschedule";
 }) {
-  const items = useFilteredCustomers((c) => {
-    const col = kind === "exemption" ? c["طلب اعفاء"] : c["طلب جدولة"];
-    return col != null && String(col).trim() !== "";
-  });
+  const items = useFilteredCustomers((c, st) => hasReqType(c, st, kind));
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-right">
-            {kind === "exemption" ? "طلبات الإعفاء" : "طلبات الجدولة"}
+            {(kind === "exemption" ? "طلبات الإعفاء" : "طلبات الجدولة")} ({items.length})
           </DialogTitle>
         </DialogHeader>
         <CustomersList
