@@ -384,7 +384,10 @@ function onCall(c: Customer, addLog: (k: string, l: any) => void) {
 function onWhats(c: Customer, addLog: (k: string, l: any) => void) {
   const p = normalizePhone(c["رقم الجوال"]);
   if (!p) return toast.error("لا يوجد رقم جوال لهذا العميل");
-  const text = WA_TEMPLATE(c["اسم العميل"] || "", formatCurrency(c["المبلغ"]));
+  const session = getSession();
+  const agentFirst = firstName(session?.name) || "المحصل";
+  const clientFirst = firstName(c["اسم العميل"]) || "العميل";
+  const text = WA_TEMPLATE(clientFirst, agentFirst);
   addLog(customerKey(c), { date: new Date().toISOString(), channel: "whatsapp" });
   window.open(`https://wa.me/${p}?text=${encodeURIComponent(text)}`, "_blank");
 }
