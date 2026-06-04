@@ -22,26 +22,58 @@ const RowSchema = z.object({
   file_month: z.string().nullable().optional(),
 });
 
+const ClearInput = z.object({ employeeId: z.string() });
+
+export const clearWalletCustomers = createServerFn({ method: "POST" })
+  .inputValidator((input) => ClearInput.parse(input))
+  .handler(async ({ data }) => {
+    if (data.employeeId !== ADMIN_EMPLOYEE_ID) throw new Error("Unauthorized");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("customers")
+      .delete()
+      .not("id", "is", null);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+const AppendInput = z.object({
+  employeeId: z.string(),
+  rows: z.array(RowSchema).max(2000),
+});
+
+export const appendWalletCustomers = createServerFn({ method: "POST" })
+  .inputValidator((input) => AppendInput.parse(input))
+  .handler(async ({ data }) => {
+    if (data.employeeId !== ADMIN_EMPLOYEE_ID) throw new Error("Unauthorized");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const CHUNK = 500;
+    for (let i = 0; i < data.rows.length; i += CHUNK) {
+      const slice = data.rows.slice(i, i + CHUNK);
+      const { error } = await supabaseAdmin.from("customers").insert(slice as any);
+      if (error) throw new Error(error.message);
+    }
+    return { inserted: data.rows.length };
+  });
+
+// Backwards-compat: keep replaceWalletCustomers but enforce small batches.
+// For full replace, callers should use clearWalletCustomers + appendWalletCustomers in chunks.
 const ReplaceInput = z.object({
   employeeId: z.string(),
-  rows: z.array(RowSchema).max(60000),
+  rows: z.array(RowSchema).max(2000),
 });
 
 export const replaceWalletCustomers = createServerFn({ method: "POST" })
   .inputValidator((input) => ReplaceInput.parse(input))
   .handler(async ({ data }) => {
-    if (data.employeeId !== ADMIN_EMPLOYEE_ID) {
-      throw new Error("Unauthorized");
-    }
+    if (data.employeeId !== ADMIN_EMPLOYEE_ID) throw new Error("Unauthorized");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const { error: delErr } = await supabaseAdmin
       .from("customers")
       .delete()
       .not("id", "is", null);
     if (delErr) throw new Error(delErr.message);
-
-    const CHUNK = 1000;
+    const CHUNK = 500;
     for (let i = 0; i < data.rows.length; i += CHUNK) {
       const slice = data.rows.slice(i, i + CHUNK);
       const { error } = await supabaseAdmin.from("customers").insert(slice as any);
@@ -62,7 +94,7 @@ const UpdateInput = z.object({
     account_number: z.string().nullable().optional(),
     national_id: z.string().nullable().optional(),
     patch: PatchSchema,
-  })).max(60000),
+  })).max(2000),
 });
 
 export const updateWalletCustomers = createServerFn({ method: "POST" })
@@ -88,7 +120,7 @@ const DeleteInput = z.object({
   matches: z.array(z.object({
     account_number: z.string().nullable().optional(),
     national_id: z.string().nullable().optional(),
-  })).max(60000),
+  })).max(2000),
 });
 
 export const deleteWalletCustomers = createServerFn({ method: "POST" })
