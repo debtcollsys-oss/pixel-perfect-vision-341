@@ -6,6 +6,7 @@ import { customerKey } from "./wallet-types";
 import { getSession } from "@/components/LoginGate";
 import defaultData from "@/data/wallet.json";
 import { getWalletCustomers } from "./wallet.functions";
+import { replaceWalletCustomers } from "./wallet-write.functions";
 
 type Meta = { fileName?: string; uploadedAt?: string; count: number };
 
