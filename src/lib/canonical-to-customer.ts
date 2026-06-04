@@ -38,6 +38,8 @@ export function canonicalToCustomer(row: CanonicalRow): Customer & { "ID AGENT"?
     "رقم القضية": caseNo as any,
     "اسم المحكمة": get("اسم المحكمة") as any,
     "رقم طلب سيبل": str(siebelReq),
+    "نوع الطلب": str(get("نوع الطلب")),
+    "الوصف": str(get("الوصف")),
     "مرجع الحجز التنفيذي": str(get("مرجع الحجز التنفيذي")),
     "ارصدة محجوزه": held as any,
     "عميل مشترك": yesNo(get("عميل مشترك")),
