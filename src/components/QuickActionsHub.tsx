@@ -33,6 +33,8 @@ import {
   formatCurrency,
   type Customer,
 } from "@/lib/wallet-types";
+
+
 import { getSession } from "@/components/LoginGate";
 import {
   addMessage,
@@ -200,8 +202,20 @@ function RequestsDialog({
 
 /* ---------- Full wallet table ---------- */
 
+const ACTION_OPTIONS = [
+  "وعد سداد",
+  "بيانات خاطئة",
+  "Call Back",
+  "رافض السداد",
+  "تم السداد",
+] as const;
+
+const YES_NO_OPTIONS = ["Yes", "No"] as const;
+
 function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { customers } = useWallet();
+  const { states, update } = useCustomerStates();
+
   const cols: { h: string; k: keyof Customer | string[] }[] = [
     { h: "رقم الحساب", k: "رقم الحساب" },
     { h: "مبلغ المديونية", k: "مبلغ المديونية" },
@@ -233,7 +247,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
     { h: "التثبيت", k: "التثبيت" },
   ];
 
-  const readVal = (row: Customer, k: string | string[]) => {
+  const readRaw = (row: Customer, k: string | string[]) => {
     const keys = Array.isArray(k) ? k : [k];
     for (const key of keys) {
       const v = (row as any)[key];
@@ -241,6 +255,48 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
     }
     return null;
   };
+
+  const readEdited = (row: Customer, st: any, k: string | string[]) => {
+    const keys = Array.isArray(k) ? k : [k];
+    const edits = st?.edits || {};
+    for (const key of keys) {
+      if (edits[key] != null && edits[key] !== "") return edits[key];
+    }
+    return readRaw(row, k);
+  };
+
+  const patchEdit = (row: Customer, field: string, value: any) => {
+    const key = customerKey(row);
+    if (!key) return;
+    const st = states[key];
+    update(key, { edits: { ...(st?.edits || {}), [field]: value } });
+  };
+
+  const yesNoValue = (v: any): "Yes" | "No" | "" => {
+    if (v == null || v === "") return "";
+    const s = String(v).trim().toLowerCase();
+    if (["yes", "y", "true", "1", "نعم"].includes(s)) return "Yes";
+    if (["no", "n", "false", "0", "لا"].includes(s)) return "No";
+    return s.includes("نعم") ? "Yes" : s.includes("لا") ? "No" : "";
+  };
+
+  // Convert any phone-ish string to international +966XXXXXXXXX format for display
+  const intlPhone = (v: any): string => {
+    if (v == null || v === "") return "";
+    let s = String(v).replace(/\D/g, "");
+    if (!s) return "";
+    if (s.startsWith("00")) s = s.slice(2);
+    if (s.startsWith("05") && s.length === 10) s = "966" + s.slice(1);
+    else if (s.startsWith("5") && s.length === 9) s = "966" + s;
+    else if (!s.startsWith("966")) {
+      // assume KSA if 9 digits starting with 5; else just prefix
+      if (s.length === 9 && s.startsWith("5")) s = "966" + s;
+    }
+    return "+" + s;
+  };
+
+  const cellCls =
+    "border px-1.5 py-1 whitespace-nowrap tabular-nums align-middle";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -261,23 +317,130 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
               </tr>
             </thead>
             <tbody>
-              {customers.map((row, i) => (
-                <tr key={i} className="odd:bg-background even:bg-muted/30 hover:bg-accent/40">
-                  <td className="border px-2 py-1 tabular-nums text-muted-foreground">{i + 1}</td>
-                  {cols.map((c) => {
-                    const v = readVal(row, c.k as any);
-                    return (
-                      <td key={c.h} className="border px-2 py-1 whitespace-nowrap tabular-nums">
-                        {v == null
-                          ? "—"
-                          : c.h === "مبلغ المديونية"
-                            ? formatCurrency(v as number)
-                            : String(v)}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {customers.map((row, i) => {
+                const st = states[customerKey(row)];
+                return (
+                  <tr key={i} className="odd:bg-background even:bg-muted/30 hover:bg-accent/40">
+                    <td className={cellCls + " text-muted-foreground"}>{i + 1}</td>
+                    {cols.map((c) => {
+                      const v = readEdited(row, st, c.k as any);
+                      const display = v == null ? "" : String(v);
+
+                      // ---- Editable: الاكشن (dropdown) ----
+                      if (c.h === "الاكشن") {
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            <Select
+                              value={display || undefined}
+                              onValueChange={(val) => patchEdit(row, "الاكشن", val)}
+                            >
+                              <SelectTrigger className="h-7 min-w-[110px] text-[11px] px-2">
+                                <SelectValue placeholder="" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {ACTION_OPTIONS.map((o) => (
+                                  <SelectItem key={o} value={o} className="text-[12px]">
+                                    {o}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        );
+                      }
+
+                      // ---- Editable: تاريخ التجميد (date) ----
+                      if (c.h === "تاريخ التجميد") {
+                        const dateVal = display ? String(display).slice(0, 10) : "";
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            <Input
+                              type="date"
+                              value={dateVal}
+                              onChange={(ev) =>
+                                patchEdit(row, "تاريخ التجميد", ev.target.value || null)
+                              }
+                              className="h-7 text-[11px] px-2 min-w-[130px]"
+                            />
+                          </td>
+                        );
+                      }
+
+                      // ---- Editable: Yes/No fields ----
+                      if (
+                        c.h === "عميل متوفي" ||
+                        c.h === "عميل رواتب" ||
+                        c.h === "تقييم الأعمال"
+                      ) {
+                        const yn = yesNoValue(v);
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            <Select
+                              value={yn || undefined}
+                              onValueChange={(val) => patchEdit(row, c.h, val)}
+                            >
+                              <SelectTrigger className="h-7 min-w-[70px] text-[11px] px-2">
+                                <SelectValue placeholder="" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {YES_NO_OPTIONS.map((o) => (
+                                  <SelectItem key={o} value={o} className="text-[12px]">
+                                    {o}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        );
+                      }
+
+                      // ---- Editable: رقم القضية (digits only) ----
+                      if (c.h === "رقم القضية") {
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            <Input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              value={display}
+                              onChange={(ev) => {
+                                const onlyDigits = ev.target.value.replace(/\D/g, "");
+                                patchEdit(row, "رقم القضية", onlyDigits || null);
+                              }}
+                              className="h-7 text-[11px] px-2 min-w-[110px]"
+                            />
+                          </td>
+                        );
+                      }
+
+                      // ---- Phone: international format ----
+                      if (c.h === "رقم الجوال") {
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            {intlPhone(v)}
+                          </td>
+                        );
+                      }
+
+                      // ---- Currency ----
+                      if (c.h === "مبلغ المديونية") {
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            {v == null ? "" : formatCurrency(v as number)}
+                          </td>
+                        );
+                      }
+
+                      // ---- Default: plain display, empty when null ----
+                      return (
+                        <td key={c.h} className={cellCls}>
+                          {display}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -285,6 +448,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
     </Dialog>
   );
 }
+
 
 /* ---------- Mail dialog ---------- */
 
