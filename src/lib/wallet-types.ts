@@ -21,6 +21,8 @@ export type Customer = {
   "رقم القضية"?: string | null;
   "اسم المحكمة"?: string | null;
   "رقم طلب سيبل"?: string | null;
+  "نوع الطلب"?: string | null;
+  "الوصف"?: string | null;
   "مرجع الحجز التنفيذي"?: string | null;
   "ارصدة محجوزه"?: string | number | null;
   "عميل مشترك"?: string | null;
