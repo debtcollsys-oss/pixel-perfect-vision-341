@@ -135,38 +135,32 @@ export function useWallet() {
 
   const replaceData = useCallback(
     async (next: Customer[], fileName?: string) => {
-      const uid = null;
-      // Delete all existing then insert in chunks
-      const { error: delErr } = await supabase
-        .from("customers")
-        .delete()
-        .not("id", "is", null);
-      if (delErr) {
-        console.error("delete customers", delErr);
-        throw delErr;
+      const session = getSession();
+      if (!session || session.role !== "admin") {
+        throw new Error("الإدارة فقط يمكنها استبدال المحفظة");
       }
       const rows = next.map((c) => ({
-        ...customerToDbRow(c, uid),
+        ...customerToDbRow(c, null),
         file_month: fileName || null,
       }));
-      // Deduplicate by customer_key (last wins)
       const dedup = new Map<string, any>();
       for (const r of rows) {
         if (r.customer_key) dedup.set(r.customer_key, r);
       }
-      const finalRows = Array.from(dedup.values());
-      const CHUNK = 500;
-      for (let i = 0; i < finalRows.length; i += CHUNK) {
-        const slice = finalRows.slice(i, i + CHUNK);
-        const { error } = await supabase.from("customers").insert(slice);
-        if (error) {
-          console.error("insert chunk", error);
-          throw error;
-        }
-      }
+      const finalRows = Array.from(dedup.values()).map((r) => ({
+        ...r,
+        agent_employee_id: r.agent_employee_id != null ? String(r.agent_employee_id) : null,
+        account_number: r.account_number != null ? String(r.account_number) : null,
+        national_id: r.national_id != null ? String(r.national_id) : null,
+        phone: r.phone != null ? String(r.phone) : null,
+        debt_age: r.debt_age != null ? String(r.debt_age) : null,
+      }));
+      await replaceCustomersFn({
+        data: { employeeId: session.employeeId, rows: finalRows },
+      });
       await load();
     },
-    [load],
+    [load, replaceCustomersFn],
   );
 
   const resetData = useCallback(async () => {
