@@ -57,6 +57,17 @@ export default function WalletApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const handler = (ev: Event) => {
+      const key = (ev as CustomEvent<string>).detail;
+      if (!key) return;
+      const found = customers.find((c) => customerKey(c) === key);
+      if (found) setOpenCustomer(found);
+    };
+    window.addEventListener("open-customer", handler as EventListener);
+    return () => window.removeEventListener("open-customer", handler as EventListener);
+  }, [customers]);
+
   const products = useMemo(
     () =>
       Array.from(
