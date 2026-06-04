@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import type { Customer, CustomerState, ContactLog } from "./wallet-types";
 import { customerKey } from "./wallet-types";
 import { getSession } from "@/components/LoginGate";
 import defaultData from "@/data/wallet.json";
+import { getWalletCustomers } from "./wallet.functions";
 
 type Meta = { fileName?: string; uploadedAt?: string; count: number };
 
@@ -91,24 +93,20 @@ export function useWallet() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [meta, setMeta] = useState<Meta>({ count: 0, fileName: "محفظة سحابية" });
   const [hydrated, setHydrated] = useState(false);
+  const loadWalletCustomers = useServerFn(getWalletCustomers);
 
   const load = useCallback(async () => {
     const session = getSession();
-    let query = supabase
-      .from("customers")
-      .select("*")
-      .order("amount", { ascending: false })
-      .limit(50000);
-    if (session?.role === "collector") {
-      // Collector sees ONLY accounts assigned to their employee id
-      query = query.eq("agent_employee_id", session.employeeId);
-    }
-    const { data, error } = await query;
-    if (error) {
-      console.error("load customers", error);
+    if (!session) {
       setCustomers([]);
-      setMeta({ count: 0, fileName: "خطأ في التحميل" });
-    } else {
+      setMeta({ count: 0, fileName: "لا توجد جلسة" });
+      setHydrated(true);
+      return;
+    }
+    try {
+      const data = await loadWalletCustomers({
+        data: { role: session.role, employeeId: session.employeeId },
+      });
       const list = (data || []).map(rowToCustomer);
       setCustomers(list);
       const latest = (data || []).reduce(
@@ -121,9 +119,13 @@ export function useWallet() {
         fileName: list.length ? "محفظة سحابية" : "لا توجد بيانات",
         uploadedAt: latest,
       });
+    } catch (error) {
+      console.error("load customers", error);
+      setCustomers([]);
+      setMeta({ count: 0, fileName: "خطأ في التحميل" });
     }
     setHydrated(true);
-  }, []);
+  }, [loadWalletCustomers]);
 
   useEffect(() => {
     void load();
