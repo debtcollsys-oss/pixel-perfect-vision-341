@@ -368,19 +368,19 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                               >
                                 <SelectValue placeholder="" />
                               </SelectTrigger>
-                              <SelectContent dir="rtl" align="end">
+                              <SelectContent dir="rtl" align="start" className="min-w-[140px]">
                                 {ACTION_OPTIONS.map((o) => (
                                   <SelectItem
                                     key={o.value}
                                     value={o.value}
-                                    className="text-[11px] justify-end text-right"
+                                    className="text-[12px] pl-2 pr-2 [&>span:first-child]:hidden flex justify-end text-right"
                                   >
-                                    <span className="flex items-center gap-2 flex-row-reverse">
+                                    <span className="flex items-center gap-2 w-full justify-end">
+                                      <span style={{ color: o.color }}>{o.value}</span>
                                       <span
-                                        className="inline-block w-2 h-2 rounded-full"
+                                        className="inline-block w-2 h-2 rounded-full shrink-0"
                                         style={{ backgroundColor: o.color }}
                                       />
-                                      <span style={{ color: o.color }}>{o.value}</span>
                                     </span>
                                   </SelectItem>
                                 ))}
