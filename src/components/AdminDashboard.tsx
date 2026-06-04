@@ -115,6 +115,33 @@ function HomeGrid({ onSelect }: { onSelect: (t: Tab) => void }) {
     { id: "requests", title: "استقبال طلبات الطرف الثالث", desc: "مراجعة الطلبات المقدمة من المحصلين", icon: Inbox, badge: pendingCount },
   ];
 
+  const clearCache = async () => {
+    if (!confirm("سيتم تفريغ ذاكرة الجهاز المؤقتة (التخزين المحلي والكاش) مع الاحتفاظ بالجلسة الحالية. هل تريد المتابعة؟")) return;
+    try {
+      const sessionRaw = localStorage.getItem("wallet:session");
+      localStorage.clear();
+      if (sessionRaw) localStorage.setItem("wallet:session", sessionRaw);
+      sessionStorage.clear();
+      if (typeof caches !== "undefined") {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if (typeof indexedDB !== "undefined" && (indexedDB as any).databases) {
+        const dbs = await (indexedDB as any).databases();
+        await Promise.all(
+          (dbs || []).map((d: any) => d?.name ? new Promise((res) => {
+            const req = indexedDB.deleteDatabase(d.name);
+            req.onsuccess = req.onerror = req.onblocked = () => res(null);
+          }) : null),
+        );
+      }
+      toast.success("تم تفريغ الذاكرة، سيتم إعادة تحميل الصفحة");
+      setTimeout(() => window.location.reload(), 600);
+    } catch (e: any) {
+      toast.error("تعذر تفريغ الذاكرة: " + (e?.message || ""));
+    }
+  };
+
   return (
     <div className="grid gap-3">
       {tiles.map((t) => (
@@ -135,9 +162,22 @@ function HomeGrid({ onSelect }: { onSelect: (t: Tab) => void }) {
           </div>
         </button>
       ))}
+      <button
+        onClick={clearCache}
+        className="text-right rounded-2xl border border-destructive/30 bg-destructive/5 p-4 hover:bg-destructive/10 transition flex items-center gap-4 shadow-sm"
+      >
+        <div className="size-12 rounded-xl bg-destructive/10 text-destructive grid place-items-center shrink-0">
+          <Eraser className="size-6" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-base text-destructive">تصفير وتفريغ الذاكرة</div>
+          <div className="text-xs text-muted-foreground mt-0.5">تنظيف ذاكرة الجهاز المؤقتة (Cache / LocalStorage) مع الاحتفاظ بالجلسة</div>
+        </div>
+      </button>
     </div>
   );
 }
+
 
 // ---------- Smart column mapping ----------
 function normHeader(s: string) {
