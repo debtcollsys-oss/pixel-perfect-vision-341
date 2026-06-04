@@ -6,7 +6,7 @@ import { customerKey } from "./wallet-types";
 import { getSession } from "@/components/LoginGate";
 import defaultData from "@/data/wallet.json";
 import { getWalletCustomers } from "./wallet.functions";
-import { replaceWalletCustomers } from "./wallet-write.functions";
+import { clearWalletCustomers, appendWalletCustomers } from "./wallet-write.functions";
 
 type Meta = { fileName?: string; uploadedAt?: string; count: number };
 
@@ -95,7 +95,8 @@ export function useWallet() {
   const [meta, setMeta] = useState<Meta>({ count: 0, fileName: "محفظة سحابية" });
   const [hydrated, setHydrated] = useState(false);
   const loadWalletCustomers = useServerFn(getWalletCustomers);
-  const replaceCustomersFn = useServerFn(replaceWalletCustomers);
+  const clearCustomersFn = useServerFn(clearWalletCustomers);
+  const appendCustomersFn = useServerFn(appendWalletCustomers);
 
   const load = useCallback(async () => {
     const session = getSession();
@@ -155,12 +156,17 @@ export function useWallet() {
         phone: r.phone != null ? String(r.phone) : null,
         debt_age: r.debt_age != null ? String(r.debt_age) : null,
       }));
-      await replaceCustomersFn({
-        data: { employeeId: session.employeeId, rows: finalRows },
-      });
+      await clearCustomersFn({ data: { employeeId: session.employeeId } });
+      const CHUNK = 1500;
+      for (let i = 0; i < finalRows.length; i += CHUNK) {
+        const slice = finalRows.slice(i, i + CHUNK);
+        await appendCustomersFn({
+          data: { employeeId: session.employeeId, rows: slice },
+        });
+      }
       await load();
     },
-    [load, replaceCustomersFn],
+    [load, clearCustomersFn, appendCustomersFn],
   );
 
   const resetData = useCallback(async () => {
