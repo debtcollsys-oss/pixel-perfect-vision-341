@@ -30,16 +30,19 @@ export function QuickActionsSlider({
   onSelect,
   groupEnabled = false,
   mailBadge,
+  badges,
 }: {
   onSelect?: (key: QuickKey) => void;
   groupEnabled?: boolean;
   mailBadge?: number;
+  badges?: Partial<Record<QuickKey, number>>;
 }) {
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
       <div className="aspect-[16/9] w-full p-5 grid grid-cols-3 grid-rows-2 gap-3">
         {ITEMS.map(({ key, label, icon: Icon }) => {
           const disabled = key === "group" && !groupEnabled;
+          const badge = key === "mail" ? mailBadge : badges?.[key];
           return (
             <button
               key={key}
@@ -58,9 +61,9 @@ export function QuickActionsSlider({
               <span className="text-[10px] font-bold leading-tight whitespace-nowrap">
                 {label}
               </span>
-              {key === "mail" && mailBadge && mailBadge > 0 ? (
-                <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                  {mailBadge}
+              {badge && badge > 0 ? (
+                <span className="absolute top-1 left-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                  {badge}
                 </span>
               ) : null}
             </button>
