@@ -95,6 +95,7 @@ export function useWallet() {
   const [meta, setMeta] = useState<Meta>({ count: 0, fileName: "محفظة سحابية" });
   const [hydrated, setHydrated] = useState(false);
   const loadWalletCustomers = useServerFn(getWalletCustomers);
+  const replaceCustomersFn = useServerFn(replaceWalletCustomers);
 
   const load = useCallback(async () => {
     const session = getSession();
