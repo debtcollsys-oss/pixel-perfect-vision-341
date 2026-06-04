@@ -472,6 +472,32 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                         );
                       }
 
+                      // ---- Clickable: opens customer page ----
+                      if (c.h === "رقم الحساب" || c.h === "رقم الهوية" || c.h === "اسم العميل") {
+                        const k = customerKey(row);
+                        return (
+                          <td key={c.h} className={cellCls}>
+                            {display ? (
+                              <button
+                                type="button"
+                                className="text-primary underline-offset-2 hover:underline"
+                                onClick={() => {
+                                  if (!k) return;
+                                  window.dispatchEvent(
+                                    new CustomEvent("open-customer", { detail: k }),
+                                  );
+                                  onClose();
+                                }}
+                              >
+                                {display}
+                              </button>
+                            ) : (
+                              ""
+                            )}
+                          </td>
+                        );
+                      }
+
                       // ---- Default: plain display, empty when null ----
                       return (
                         <td key={c.h} className={cellCls}>
