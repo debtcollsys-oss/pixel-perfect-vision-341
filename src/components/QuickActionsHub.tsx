@@ -31,8 +31,10 @@ import { useWallet, useCustomerStates } from "@/lib/wallet-store";
 import {
   customerKey,
   formatCurrency,
+  formatPhone,
   type Customer,
 } from "@/lib/wallet-types";
+
 import { getSession } from "@/components/LoginGate";
 import {
   addMessage,
