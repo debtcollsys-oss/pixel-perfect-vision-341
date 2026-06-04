@@ -323,7 +323,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   const cellCls =
-    "border px-1 py-0.5 whitespace-nowrap tabular-nums align-middle text-center text-[10px]";
+    "border px-1 py-0 whitespace-nowrap tabular-nums align-middle text-center text-[10px] leading-tight";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
