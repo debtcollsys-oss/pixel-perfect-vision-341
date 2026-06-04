@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      column_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_kind: string
+          id: string
+          is_default: boolean
+          label: string | null
+          mapping: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_kind: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          mapping: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_kind?: string
+          id?: string
+          is_default?: boolean
+          label?: string | null
+          mapping?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contact_logs: {
         Row: {
           channel: string
