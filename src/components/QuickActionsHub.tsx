@@ -187,14 +187,12 @@ function CustomersList({ items, emptyText }: { items: Customer[]; emptyText: str
 }
 
 function PromisesDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const items = useFilteredCustomers(
-    (c, st) => ((st?.edits?.["الاكشن"] ?? c["الاكشن"]) === "وعد سداد"),
-  );
+  const items = useFilteredCustomers(isPromisePred);
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-right">وعود السداد</DialogTitle>
+          <DialogTitle className="text-right">وعود السداد ({items.length})</DialogTitle>
         </DialogHeader>
         <CustomersList items={items} emptyText="لا توجد وعود سداد مسجلة" />
       </DialogContent>
@@ -211,10 +209,23 @@ function RequestsDialog({
   onClose: () => void;
   kind: "exemption" | "reschedule";
 }) {
-  const items = useFilteredCustomers((c) => {
-    const col = kind === "exemption" ? c["طلب اعفاء"] : c["طلب جدولة"];
-    return col != null && String(col).trim() !== "";
-  });
+  const items = useFilteredCustomers((c, st) => hasReqType(c, st, kind));
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="text-right">
+            {(kind === "exemption" ? "طلبات الإعفاء" : "طلبات الجدولة")} ({items.length})
+          </DialogTitle>
+        </DialogHeader>
+        <CustomersList
+          items={items}
+          emptyText={kind === "exemption" ? "لا توجد طلبات إعفاء" : "لا توجد طلبات جدولة"}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
