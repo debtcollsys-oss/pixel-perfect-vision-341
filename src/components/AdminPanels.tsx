@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, FileText, Scale, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { updateWalletCustomers, deleteWalletCustomers } from "@/lib/wallet-write.functions";
+import { getSession } from "@/components/LoginGate";
 import MappingReview, { loadDefaultMapping, type FileKind } from "@/components/MappingReview";
 import { detectMapping, type DetectionResult, type Mapping } from "@/lib/mapping-engine";
 import type { CanonicalRow } from "@/lib/canonical-schema";
@@ -295,6 +298,8 @@ export function WalletChangesPanel() {
   const [fileName, setFileName] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [review, setReview] = useState<ReviewState>(null);
+  const updateFn = useServerFn(updateWalletCustomers);
+  const deleteFn = useServerFn(deleteWalletCustomers);
 
   const loadHistory = async () => {
     const { data } = await db
@@ -339,17 +344,20 @@ export function WalletChangesPanel() {
       const isAdd = /(إضافة|اضافه|جديد)/.test(desc);
       const isUpdate = /(تحديث|تعديل)/.test(desc);
 
+      const session = getSession();
+      if (!session || session.role !== "admin") {
+        toast.error("الإدارة فقط");
+        return;
+      }
       let affected = 0;
+      const delMatches: Array<{account_number?: string|null; national_id?: string|null}> = [];
+      const upMatches: Array<{account_number?: string|null; national_id?: string|null; patch: any}> = [];
       for (const r of rows) {
         const acc = toStrId(r["رقم الحساب"]);
         const nid = toStrId(r["رقم الهوية"]);
         if (!acc && !nid) continue;
         if (isExclude) {
-          const q = supabase.from("customers").delete();
-          const { error } = acc
-            ? await q.eq("account_number", acc)
-            : await q.eq("national_id", nid!);
-          if (!error) affected++;
+          delMatches.push({ account_number: acc, national_id: nid });
         } else if (isTransfer || isUpdate) {
           const newAgent = toStrId(r["الرقم الوظيفي للمحصل"]);
           const patch: any = {};
@@ -359,14 +367,19 @@ export function WalletChangesPanel() {
           const newAction = r["الاكشن"];
           if (newAction) patch.action = newAction;
           if (Object.keys(patch).length > 0) {
-            const q = supabase.from("customers").update(patch);
-            const { error } = acc
-              ? await q.eq("account_number", acc)
-              : await q.eq("national_id", nid!);
-            if (!error) affected++;
+            upMatches.push({ account_number: acc, national_id: nid, patch });
           }
         }
       }
+      if (delMatches.length) {
+        const res = await deleteFn({ data: { employeeId: session.employeeId, matches: delMatches } });
+        affected += res.affected;
+      }
+      if (upMatches.length) {
+        const res = await updateFn({ data: { employeeId: session.employeeId, matches: upMatches } });
+        affected += res.affected;
+      }
+
 
       await db.from("wallet_changes_log").insert({
         change_type: isExclude ? "exclude" : isTransfer ? "transfer" : isAdd ? "add" : "update",
