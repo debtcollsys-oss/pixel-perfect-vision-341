@@ -331,8 +331,8 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-right">المحفظة كاملة ({customers.length} عميل)</DialogTitle>
         </DialogHeader>
-        <div className="overflow-auto max-h-[75vh]">
-          <table className="w-full text-[10px] border-collapse">
+        <div className="overflow-auto max-h-[75vh]" dir="ltr">
+          <table className="w-full text-[10px] border-collapse" dir="ltr">
             <thead className="sticky top-0 bg-muted z-10">
               <tr>
                 <th className="border px-1 py-1 text-center font-bold">#</th>
