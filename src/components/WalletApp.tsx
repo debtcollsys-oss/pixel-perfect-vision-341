@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useWallet, useCustomerStates } from "@/lib/wallet-store";
+import { getSession } from "@/components/LoginGate";
 import { loadPolicies, loadActiveId, computeDebtAge, ageBucketFor, getDiscountRate, type ProductType, type CaseStatus } from "@/lib/discount-policy";
 import { ThirdPartyDialog } from "@/components/ThirdPartyDialog";
 import { CollectorSlider } from "@/components/CollectorSlider";
