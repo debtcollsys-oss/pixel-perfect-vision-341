@@ -298,6 +298,8 @@ export function WalletChangesPanel() {
   const [fileName, setFileName] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [review, setReview] = useState<ReviewState>(null);
+  const updateFn = useServerFn(updateWalletCustomers);
+  const deleteFn = useServerFn(deleteWalletCustomers);
 
   const loadHistory = async () => {
     const { data } = await db
