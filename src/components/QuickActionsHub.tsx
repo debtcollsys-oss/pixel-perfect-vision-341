@@ -229,13 +229,13 @@ function RequestsDialog({
 
 /* ---------- Full wallet table ---------- */
 
-const ACTION_OPTIONS = [
-  "وعد سداد",
-  "بيانات خاطئة",
-  "Call Back",
-  "رافض السداد",
-  "تم السداد",
-] as const;
+const ACTION_OPTIONS: { value: string; color: string }[] = [
+  { value: "وعد سداد", color: "#f59e0b" },
+  { value: "بيانات خاطئة", color: "#ef4444" },
+  { value: "Call Back", color: "#3b82f6" },
+  { value: "رافض السداد", color: "#dc2626" },
+  { value: "تم السداد", color: "#10b981" },
+];
 
 const YES_NO_OPTIONS = ["Yes", "No"] as const;
 
