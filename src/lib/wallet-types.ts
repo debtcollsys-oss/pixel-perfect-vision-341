@@ -1,13 +1,13 @@
 export type Customer = {
-  // ---- Official portfolio columns (exact names from the Excel file) ----
+  // ---- Official portfolio columns (new order) ----
   "رقم الحساب"?: string | null;
+  "مبلغ المديونية"?: number | null;
+  "Note"?: string | null;
   "الاكشن"?: string | null;
-  "تيم جدة / تيم الرياض"?: string | null;
   "الرقم الوظيفي للمحصل"?: string | null;
   "اسم المحصل"?: string | null;
   "الرقم الوظيفي للمشرف"?: string | null;
   "اسم المشرف"?: string | null;
-  "مبلغ المديونية"?: number | null;
   "عدد ايام التعثر"?: string | number | null;
   "نوع المنتج"?: string | null;
   "تاريخ التجميد"?: string | null;
@@ -16,27 +16,33 @@ export type Customer = {
   "رقم الجوال"?: string | null;
   "عميل متوفي"?: string | null;
   "عميل رواتب"?: string | null;
-  "CaseNo. رقم القضية"?: string | null;
+  "تقييم الأعمال"?: string | null;
+  "jWO-DT"?: string | null;
+  "رقم القضية"?: string | null;
   "اسم المحكمة"?: string | null;
-  "طلب اعفاء"?: string | null;
+  "رقم طلب سيبل"?: string | null;
   "مرجع الحجز التنفيذي"?: string | null;
   "ارصدة محجوزه"?: string | number | null;
+  "عميل مشترك"?: string | null;
   "طلب جدولة"?: string | null;
+  "التثبيت"?: string | null;
+  // ---- Legacy aliases (mirrored for backward compat with older UI code) ----
+  "المبلغ"?: number | null;
+  "المنتج"?: string | null;
+  "عمر الدين"?: string | number | null;
+  "ارصده محجوزه"?: number | null;
+  "رقم الطلب في نظام سيبل"?: string | null;
+  "طلب الطلب"?: string | null;
+  // ---- Deprecated legacy fields (kept optional so older references compile) ----
+  "CaseNo. رقم القضية"?: string | null;
+  "طلب اعفاء"?: string | null;
   "رقم الطلب"?: string | null;
   "تصنيف الطلب"?: string | null;
   "حالة الطلب الفرعية"?: string | null;
   "عدد الطلبات على رقم هوية العميل"?: number | null;
   "تاريخ فتح الطلب"?: string | null;
   "الوصف"?: string | null;
-  "التثبيت"?: string | null;
-  // ---- Legacy aliases (mirrored for backward compat with older UI code) ----
-  "المبلغ"?: number | null;
-  "المنتج"?: string | null;
-  "عمر الدين"?: string | number | null;
-  "رقم القضية"?: string | null;
-  "ارصده محجوزه"?: number | null;
-  "رقم الطلب في نظام سيبل"?: string | null;
-  "طلب الطلب"?: string | null;
+  "تيم جدة / تيم الرياض"?: string | null;
 };
 
 export type ContactLog = {
