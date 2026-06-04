@@ -226,22 +226,6 @@ function RequestsDialog({
     </Dialog>
   );
 }
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="text-right">
-            {kind === "exemption" ? "طلبات الإعفاء" : "طلبات الجدولة"}
-          </DialogTitle>
-        </DialogHeader>
-        <CustomersList
-          items={items}
-          emptyText={kind === "exemption" ? "لا توجد طلبات إعفاء" : "لا توجد طلبات جدولة"}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* ---------- Full wallet table ---------- */
 
