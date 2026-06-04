@@ -296,7 +296,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   const cellCls =
-    "border px-1.5 py-1 whitespace-nowrap tabular-nums align-middle";
+    "border px-1 py-0.5 whitespace-nowrap tabular-nums align-middle text-center text-[10px]";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -305,12 +305,12 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
           <DialogTitle className="text-right">المحفظة كاملة ({customers.length} عميل)</DialogTitle>
         </DialogHeader>
         <div className="overflow-auto max-h-[75vh]">
-          <table className="w-full text-[11px] border-collapse">
+          <table className="w-full text-[10px] border-collapse">
             <thead className="sticky top-0 bg-muted z-10">
               <tr>
-                <th className="border px-2 py-1.5 text-right font-bold">#</th>
+                <th className="border px-1 py-1 text-center font-bold">#</th>
                 {cols.map((c) => (
-                  <th key={c.h} className="border px-2 py-1.5 text-right font-bold whitespace-nowrap">
+                  <th key={c.h} className="border px-1 py-1 text-center font-bold whitespace-nowrap">
                     {c.h}
                   </th>
                 ))}
@@ -334,12 +334,12 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                               value={display || undefined}
                               onValueChange={(val) => patchEdit(row, "الاكشن", val)}
                             >
-                              <SelectTrigger className="h-7 min-w-[110px] text-[11px] px-2">
+                              <SelectTrigger className="h-6 min-w-[100px] text-[10px] px-1 mx-auto">
                                 <SelectValue placeholder="" />
                               </SelectTrigger>
                               <SelectContent>
                                 {ACTION_OPTIONS.map((o) => (
-                                  <SelectItem key={o} value={o} className="text-[12px]">
+                                  <SelectItem key={o} value={o} className="text-[11px]">
                                     {o}
                                   </SelectItem>
                                 ))}
@@ -360,7 +360,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                               onChange={(ev) =>
                                 patchEdit(row, "تاريخ التجميد", ev.target.value || null)
                               }
-                              className="h-7 text-[11px] px-2 min-w-[130px]"
+                              className="h-6 text-[10px] px-1 min-w-[110px] mx-auto"
                             />
                           </td>
                         );
@@ -379,12 +379,12 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                               value={yn || undefined}
                               onValueChange={(val) => patchEdit(row, c.h, val)}
                             >
-                              <SelectTrigger className="h-7 min-w-[70px] text-[11px] px-2">
+                              <SelectTrigger className="h-6 min-w-[60px] text-[10px] px-1 mx-auto">
                                 <SelectValue placeholder="" />
                               </SelectTrigger>
                               <SelectContent>
                                 {YES_NO_OPTIONS.map((o) => (
-                                  <SelectItem key={o} value={o} className="text-[12px]">
+                                  <SelectItem key={o} value={o} className="text-[11px]">
                                     {o}
                                   </SelectItem>
                                 ))}
@@ -407,7 +407,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                                 const onlyDigits = ev.target.value.replace(/\D/g, "");
                                 patchEdit(row, "رقم القضية", onlyDigits || null);
                               }}
-                              className="h-7 text-[11px] px-2 min-w-[110px]"
+                              className="h-6 text-[10px] px-1 min-w-[90px] mx-auto"
                             />
                           </td>
                         );
@@ -422,10 +422,10 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                         );
                       }
 
-                      // ---- Currency ----
+                      // ---- Currency (right-aligned only column) ----
                       if (c.h === "مبلغ المديونية") {
                         return (
-                          <td key={c.h} className={cellCls}>
+                          <td key={c.h} className={cellCls.replace("text-center", "text-right")}>
                             {v == null ? "" : formatCurrency(v as number)}
                           </td>
                         );
