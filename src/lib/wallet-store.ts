@@ -156,12 +156,17 @@ export function useWallet() {
         phone: r.phone != null ? String(r.phone) : null,
         debt_age: r.debt_age != null ? String(r.debt_age) : null,
       }));
-      await replaceCustomersFn({
-        data: { employeeId: session.employeeId, rows: finalRows },
-      });
+      await clearCustomersFn({ data: { employeeId: session.employeeId } });
+      const CHUNK = 1500;
+      for (let i = 0; i < finalRows.length; i += CHUNK) {
+        const slice = finalRows.slice(i, i + CHUNK);
+        await appendCustomersFn({
+          data: { employeeId: session.employeeId, rows: slice },
+        });
+      }
       await load();
     },
-    [load, replaceCustomersFn],
+    [load, clearCustomersFn, appendCustomersFn],
   );
 
   const resetData = useCallback(async () => {
