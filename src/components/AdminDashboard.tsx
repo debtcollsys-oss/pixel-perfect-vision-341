@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock, Scale, FileText, RefreshCw, LogOut } from "lucide-react";
+import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock, Scale, FileText, RefreshCw, LogOut, Eraser } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "@/lib/wallet-store";
 import collectors from "@/data/collectors.json";
