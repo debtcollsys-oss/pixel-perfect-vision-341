@@ -161,26 +161,17 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <section className="relative flex flex-col items-stretch px-4 pt-3 pb-8 text-white">
+      <section className="relative flex flex-col items-stretch px-4 pt-6 pb-8 text-white">
         <div className="w-full max-w-md mx-auto">
-          <img
-            src={heroMain}
-            alt="التحصيل الذكي"
-            className="w-full h-auto select-none"
-            draggable={false}
-          />
-        </div>
-
-        <div className="w-full max-w-md mx-auto mt-4">
           <FeatureSlider />
         </div>
 
         <Button
           onClick={openLogin}
           size="lg"
-          className="mt-6 mx-auto bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-10 h-11 gap-2 shadow-lg ring-1 ring-emerald-300/40 font-bold"
+          className="mt-8 mx-auto bg-emerald-500/70 hover:bg-emerald-500 text-white rounded-2xl px-16 h-14 gap-3 shadow-lg font-bold text-base w-[88%] max-w-md"
         >
-          <LogIn className="size-4" />
+          <LogIn className="size-5" />
           تسجيل الدخول
         </Button>
       </section>
