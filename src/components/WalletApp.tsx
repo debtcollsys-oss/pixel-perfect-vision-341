@@ -36,8 +36,13 @@ import {
   normalizePhone,
 } from "@/lib/wallet-types";
 
-const WA_TEMPLATE = (name: string, amount: string) =>
-  `السلام عليكم ${name}،\nنود التواصل معكم بخصوص المبلغ المستحق ${amount} ريال. نرجو التكرم بالتواصل معنا في أقرب وقت.\nشكراً لكم.`;
+const firstName = (full?: string | null) => {
+  const s = String(full || "").trim();
+  if (!s) return "";
+  return s.split(/\s+/)[0];
+};
+const WA_TEMPLATE = (clientFirst: string, agentFirst: string) =>
+  `السلام عليكم ورحمة الله\n\nالأخ / ${clientFirst}\n\nمساء الخير 🤍\n\nمعك أخوك ${agentFirst}\n\nمن إدارة البنك الأهلي السعودي بجدة\n\nالإدارة العامة \n\nأعتذر عن الإزعاج ، تواصلي معك بخصوص مبلغ المديونية القائم عليك \n\nإذا حاب تستفيد من الخصم المقدم لك من البنك الأهلي بموجب خطاب تسوية ، أو مناقشة بدائل أخرى لمعالجة التعثر، ومن ضمنها :\n\n✔︎ إعادة الجدولة \n\n✔︎ شراء المديونية،\n\n✔︎ تقديم طلب إعفاء من المديونية ، في حال وجود تقرير طبي يوضح العجز وعدم اللياقة الطبية للعمل.\n\nويهدف هذا التواصل إلى دراسة إمكانية معالجة التعثر والوقوف على رغبتكم ، والإستماع إلى مقترحاتكم ، والعمل معكم للوصول إلى حل مناسب لكم أولًا ، وبما ترونه أنتم ملائماً حسب وضعكم المالي وبما يتوافق مع الأنظمة المعمول بها \n\nوشكراً 🤍`;
 
 export default function WalletApp() {
   const { customers, meta, hydrated, replaceData, resetData } = useWallet();
