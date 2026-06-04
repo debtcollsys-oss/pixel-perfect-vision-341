@@ -43,7 +43,6 @@ export type Customer = {
   "حالة الطلب الفرعية"?: string | null;
   "عدد الطلبات على رقم هوية العميل"?: number | null;
   "تاريخ فتح الطلب"?: string | null;
-  "الوصف"?: string | null;
   "تيم جدة / تيم الرياض"?: string | null;
 };
 
