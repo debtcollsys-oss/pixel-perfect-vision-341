@@ -229,13 +229,13 @@ function RequestsDialog({
 
 /* ---------- Full wallet table ---------- */
 
-const ACTION_OPTIONS = [
-  "وعد سداد",
-  "بيانات خاطئة",
-  "Call Back",
-  "رافض السداد",
-  "تم السداد",
-] as const;
+const ACTION_OPTIONS: { value: string; color: string }[] = [
+  { value: "وعد سداد", color: "#f59e0b" },
+  { value: "بيانات خاطئة", color: "#ef4444" },
+  { value: "Call Back", color: "#3b82f6" },
+  { value: "رافض السداد", color: "#dc2626" },
+  { value: "تم السداد", color: "#10b981" },
+];
 
 const YES_NO_OPTIONS = ["Yes", "No"] as const;
 
@@ -323,7 +323,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
   };
 
   const cellCls =
-    "border px-1 py-0.5 whitespace-nowrap tabular-nums align-middle text-center text-[10px]";
+    "border px-1 py-0 whitespace-nowrap tabular-nums align-middle text-center text-[10px] leading-tight";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -355,19 +355,33 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
 
                       // ---- Editable: الاكشن (dropdown) ----
                       if (c.h === "الاكشن") {
+                        const cur = ACTION_OPTIONS.find((o) => o.value === display);
                         return (
                           <td key={c.h} className={cellCls}>
                             <Select
                               value={display || undefined}
                               onValueChange={(val) => patchEdit(row, "الاكشن", val)}
                             >
-                              <SelectTrigger className="h-6 min-w-[100px] text-[10px] px-1 mx-auto">
+                              <SelectTrigger
+                                className="h-5 min-w-[100px] text-[10px] px-1 mx-auto justify-end"
+                                style={cur ? { color: cur.color, borderColor: cur.color } : undefined}
+                              >
                                 <SelectValue placeholder="" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent dir="rtl" align="end">
                                 {ACTION_OPTIONS.map((o) => (
-                                  <SelectItem key={o} value={o} className="text-[11px]">
-                                    {o}
+                                  <SelectItem
+                                    key={o.value}
+                                    value={o.value}
+                                    className="text-[11px] justify-end text-right"
+                                  >
+                                    <span className="flex items-center gap-2 flex-row-reverse">
+                                      <span
+                                        className="inline-block w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: o.color }}
+                                      />
+                                      <span style={{ color: o.color }}>{o.value}</span>
+                                    </span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -387,7 +401,7 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
                               onChange={(ev) =>
                                 patchEdit(row, "تاريخ التجميد", ev.target.value || null)
                               }
-                              className="h-6 text-[10px] px-1 min-w-[110px] mx-auto"
+                              className="h-5 text-[10px] px-1 w-[90px] mx-auto"
                             />
                           </td>
                         );
