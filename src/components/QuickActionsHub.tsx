@@ -202,37 +202,43 @@ function RequestsDialog({
 
 function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { customers } = useWallet();
-  const cols = [
-    "رقم الحساب",
-    "الاكشن",
-    "تيم جدة / تيم الرياض",
-    "الرقم الوظيفي للمحصل",
-    "اسم المحصل",
-    "الرقم الوظيفي للمشرف",
-    "اسم المشرف",
-    "مبلغ المديونية",
-    "عدد ايام التعثر",
-    "نوع المنتج",
-    "تاريخ التجميد",
-    "رقم الهوية",
-    "اسم العميل",
-    "رقم الجوال",
-    "عميل متوفي",
-    "عميل رواتب",
-    "CaseNo. رقم القضية",
-    "اسم المحكمة",
-    "طلب اعفاء",
-    "مرجع الحجز التنفيذي",
-    "ارصدة محجوزه",
-    "طلب جدولة",
-    "رقم الطلب",
-    "تصنيف الطلب",
-    "حالة الطلب الفرعية",
-    "عدد الطلبات على رقم هوية العميل",
-    "تاريخ فتح الطلب",
-    "الوصف",
-    "التثبيت",
-  ] as const;
+  const cols: { h: string; k: keyof Customer | string[] }[] = [
+    { h: "رقم الحساب", k: "رقم الحساب" },
+    { h: "مبلغ المديونية", k: "مبلغ المديونية" },
+    { h: "Note", k: "Note" as any },
+    { h: "الاكشن", k: "الاكشن" },
+    { h: "الرقم الوظيفي للمحصل", k: "الرقم الوظيفي للمحصل" },
+    { h: "اسم المحصل", k: "اسم المحصل" },
+    { h: "الرقم الوظيفي للمشرف", k: "الرقم الوظيفي للمشرف" },
+    { h: "اسم المشرف", k: "اسم المشرف" },
+    { h: "عدد ايام التعثر", k: "عدد ايام التعثر" },
+    { h: "نوع المنتج", k: "نوع المنتج" },
+    { h: "تاريخ التجميد", k: "تاريخ التجميد" },
+    { h: "رقم الهوية", k: "رقم الهوية" },
+    { h: "اسم العميل", k: "اسم العميل" },
+    { h: "رقم الجوال", k: "رقم الجوال" },
+    { h: "عميل متوفي", k: "عميل متوفي" },
+    { h: "عميل رواتب", k: "عميل رواتب" },
+    { h: "تقييم الأعمال", k: "تقييم الأعمال" as any },
+    { h: "jWO-DT", k: "jWO-DT" as any },
+    { h: "رقم القضية", k: ["رقم القضية", "CaseNo. رقم القضية"] },
+    { h: "اسم المحكمة", k: "اسم المحكمة" },
+    { h: "رقم طلب سيبل", k: ["رقم طلب سيبل", "طلب اعفاء"] },
+    { h: "مرجع الحجز التنفيذي", k: "مرجع الحجز التنفيذي" },
+    { h: "ارصدة محجوزه", k: ["ارصدة محجوزه", "ارصده محجوزه"] },
+    { h: "عميل مشترك", k: "عميل مشترك" as any },
+    { h: "طلب جدولة", k: "طلب جدولة" },
+    { h: "التثبيت", k: "التثبيت" },
+  ];
+
+  const readVal = (row: Customer, k: string | string[]) => {
+    const keys = Array.isArray(k) ? k : [k];
+    for (const key of keys) {
+      const v = (row as any)[key];
+      if (v != null && v !== "") return v;
+    }
+    return null;
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -246,8 +252,8 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
               <tr>
                 <th className="border px-2 py-1.5 text-right font-bold">#</th>
                 {cols.map((c) => (
-                  <th key={c} className="border px-2 py-1.5 text-right font-bold whitespace-nowrap">
-                    {c}
+                  <th key={c.h} className="border px-2 py-1.5 text-right font-bold whitespace-nowrap">
+                    {c.h}
                   </th>
                 ))}
               </tr>
@@ -256,15 +262,18 @@ function FullWalletDialog({ open, onClose }: { open: boolean; onClose: () => voi
               {customers.map((row, i) => (
                 <tr key={i} className="odd:bg-background even:bg-muted/30 hover:bg-accent/40">
                   <td className="border px-2 py-1 tabular-nums text-muted-foreground">{i + 1}</td>
-                  {cols.map((c) => (
-                    <td key={c} className="border px-2 py-1 whitespace-nowrap tabular-nums">
-                      {row[c as keyof Customer] == null || row[c as keyof Customer] === ""
-                        ? "—"
-                        : c === "مبلغ المديونية"
-                          ? formatCurrency(row[c as keyof Customer] as number)
-                          : String(row[c as keyof Customer])}
-                    </td>
-                  ))}
+                  {cols.map((c) => {
+                    const v = readVal(row, c.k as any);
+                    return (
+                      <td key={c.h} className="border px-2 py-1 whitespace-nowrap tabular-nums">
+                        {v == null
+                          ? "—"
+                          : c.h === "مبلغ المديونية"
+                            ? formatCurrency(v as number)
+                            : String(v)}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
