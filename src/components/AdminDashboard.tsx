@@ -73,6 +73,7 @@ export default function AdminDashboard() {
               {tab === "changes" && "إضافة تغييرات على المحفظة الحالية"}
               {tab === "members" && "إضافة أعضاء في القروب"}
               {tab === "requests" && "طلبات إرسال العملاء للطرف الثالث"}
+              {tab === "collectors" && "بيانات المحصلين"}
             </p>
           </div>
           <Button
