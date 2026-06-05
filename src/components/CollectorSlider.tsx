@@ -262,6 +262,17 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             boxShadow: "0 0 12px rgba(34,197,94,0.4)",
           }}
         />
+        {pausedMilestone && (
+          <div
+            className="absolute inset-y-0 left-0"
+            style={{
+              width: `${displayPct}%`,
+              background: pausedMilestone.color,
+              opacity: colorFillT,
+              boxShadow: `0 0 16px ${pausedMilestone.color}`,
+            }}
+          />
+        )}
         <div
           className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none mix-blend-overlay"
           style={{
@@ -270,17 +281,28 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             animation: "meterShimmer 2.2s linear infinite",
           }}
         />
+        {showFireworks && pausedMilestone && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ left: `${pausedMilestone.at}%` }}
+          >
+            <BigFireworks color={pausedMilestone.color} />
+          </div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
             {pausedMilestone
-              ? pausedMilestone.text
+              ? showMessage
+                ? pausedMilestone.text
+                : ""
               : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
           </span>
         </div>
       </div>
+
 
       <div className="relative h-10 mt-1">
         {MILESTONES.map((m) => {
