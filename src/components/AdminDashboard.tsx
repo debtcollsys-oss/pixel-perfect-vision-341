@@ -692,3 +692,175 @@ function StatusPill({ status }: { status: ThirdPartyReq["status"] }) {
     </span>
   );
 }
+
+// ============ Collectors Data Panel ============
+
+type AggStat = {
+  employeeId: string;
+  accounts: number;
+  walletTotal: number;
+  promises: number;
+  exemptions: number;
+  reschedules: number;
+  collected: number;
+};
+
+function loadDisabled(): string[] {
+  try {
+    const a = JSON.parse(localStorage.getItem(DISABLED_KEY) || "[]");
+    return Array.isArray(a) ? a : [];
+  } catch { return []; }
+}
+
+function CollectorsDataPanel() {
+  const fetchStats = useServerFn(getCollectorsStats);
+  const [stats, setStats] = useState<Record<string, AggStat>>({});
+  const [disabled, setDisabled] = useState<string[]>(loadDisabled());
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState<Collector | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    try {
+      const data = await fetchStats({ data: { employeeId: "666666" } });
+      const map: Record<string, AggStat> = {};
+      for (const s of data as AggStat[]) map[s.employeeId] = s;
+      setStats(map);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchStats]);
+
+  useEffect(() => {
+    void refresh();
+    const id = setInterval(() => { void refresh(); }, 8000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
+  const toggleDisabled = (eid: string) => {
+    const next = disabled.includes(eid)
+      ? disabled.filter((x) => x !== eid)
+      : [...disabled, eid];
+    setDisabled(next);
+    localStorage.setItem(DISABLED_KEY, JSON.stringify(next));
+    toast.success(next.includes(eid) ? "تم إغلاق دخول المحصل" : "تم تمكين دخول المحصل");
+  };
+
+  const list = useMemo(() => {
+    const t = q.trim();
+    let arr = BASE_COLLECTORS as Collector[];
+    if (t) {
+      arr = arr.filter(
+        (c) => c.collector.includes(t) || c.employeeId.includes(t) || c.supervisor.includes(t),
+      );
+    }
+    return arr;
+  }, [q]);
+
+  const supervisorOf = (name: string) =>
+    BASE_COLLECTORS.find((c) => c.supervisor === name);
+
+  return (
+    <div className="space-y-3">
+      <Card className="p-3 space-y-2">
+        <div className="text-xs text-muted-foreground">
+          يتم تحديث البيانات تلقائيًا كل بضع ثوانٍ. اضغط على اسم المحصل لعرض تفاصيله، واستخدم زر تمكين/إغلاق للتحكم في تسجيل الدخول.
+        </div>
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="ابحث بالاسم أو الرقم الوظيفي…"
+          className="h-9"
+        />
+        <div className="text-[11px] text-muted-foreground flex items-center justify-between">
+          <span>الإجمالي: <span className="font-bold text-foreground tabular-nums">{list.length}</span></span>
+          <span>{loading ? "جاري التحميل…" : `مغلق: ${disabled.length}`}</span>
+        </div>
+      </Card>
+
+      <Card className="p-0 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50">
+              <tr className="text-right">
+                <th className="p-2 font-semibold">اسم المحصل</th>
+                <th className="p-2 font-semibold tabular-nums">الرقم الوظيفي</th>
+                <th className="p-2 font-semibold text-center">الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((c) => {
+                const isDisabled = disabled.includes(c.employeeId);
+                return (
+                  <tr key={c.employeeId} className="border-t hover:bg-accent/40">
+                    <td className="p-2">
+                      <button
+                        onClick={() => setOpen(c)}
+                        className="text-right font-medium text-primary hover:underline"
+                      >
+                        {c.collector}
+                      </button>
+                    </td>
+                    <td className="p-2 tabular-nums">{c.employeeId}</td>
+                    <td className="p-2 text-center">
+                      <Button
+                        size="sm"
+                        variant={isDisabled ? "destructive" : "outline"}
+                        onClick={() => toggleDisabled(c.employeeId)}
+                        className="h-7 px-2 text-[11px] gap-1"
+                      >
+                        {isDisabled ? (<><Lock className="size-3" /> مغلق</>) : (<><Unlock className="size-3" /> ممكّن</>)}
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {list.length === 0 && (
+                <tr><td colSpan={3} className="py-6 text-center text-muted-foreground">لا توجد نتائج</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Dialog open={!!open} onOpenChange={(o) => !o && setOpen(null)}>
+        <DialogContent dir="rtl" className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-right">بيانات المحصل</DialogTitle>
+          </DialogHeader>
+          {open && (() => {
+            const s = stats[open.employeeId];
+            const sup = supervisorOf(open.supervisor);
+            const items = [
+              { l: "اسم المحصل", v: open.collector },
+              { l: "الرقم الوظيفي", v: open.employeeId },
+              { l: "اسم المشرف", v: open.supervisor },
+              { l: "الرقم الوظيفي للمشرف", v: sup?.employeeId || "—" },
+              { l: "عدد الحسابات في المحفظة", v: s ? s.accounts.toLocaleString("en-US") : "—" },
+              { l: "عدد وعود السداد", v: s ? String(s.promises) : "—" },
+              { l: "عدد طلبات الإعفاء", v: s ? String(s.exemptions) : "—" },
+              { l: "عدد طلبات الجدولة", v: s ? String(s.reschedules) : "—" },
+              { l: "المحقق حتى الآن", v: s ? formatCurrency(s.collected) : "—" },
+            ];
+            return (
+              <div className="space-y-2 text-sm">
+                {items.map((it) => (
+                  <div key={it.l} className="flex items-center justify-between rounded-md border p-2">
+                    <span className="text-muted-foreground text-xs">{it.l}</span>
+                    <span className="font-semibold tabular-nums">{it.v}</span>
+                  </div>
+                ))}
+                <div className="text-[10px] text-muted-foreground text-center pt-1">
+                  يتم تحديث البيانات تلقائيًا
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
