@@ -139,11 +139,21 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
+  const [pausedAt, setPausedAt] = useState<number | null>(null);
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (showReal) return;
-    const cycleMs = 20000;
+
+    const pauseMs = 3000;
+    const segments = [
+      { from: 0, to: 60, dur: 6000, pauseAfter: pauseMs },
+      { from: 60, to: 70, dur: 2500, pauseAfter: pauseMs },
+      { from: 70, to: 85, dur: 3000, pauseAfter: pauseMs },
+      { from: 85, to: 100, dur: 3000, pauseAfter: pauseMs },
+    ];
+    const cycleMs = segments.reduce((s, x) => s + x.dur + x.pauseAfter, 0);
+
     let raf = 0;
     let cancelled = false;
     let startTs = 0;
@@ -154,11 +164,29 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
     const tick = (t: number) => {
       if (cancelled) return;
       if (!startTs) startTs = t;
-      const elapsed = (t - startTs) % cycleMs;
-      const k = elapsed / cycleMs;
-      const nextPct = 100 * ease(k);
+      const total = (t - startTs) % cycleMs;
+      if (total < 50) lastBurstRef.current = null;
+
+      let elapsed = total;
+      let nextPct = 0;
+      let currentPause: number | null = null;
+      for (const seg of segments) {
+        if (elapsed < seg.dur) {
+          const k = elapsed / seg.dur;
+          nextPct = seg.from + (seg.to - seg.from) * ease(k);
+          break;
+        }
+        elapsed -= seg.dur;
+        if (elapsed < seg.pauseAfter) {
+          nextPct = seg.to;
+          currentPause = seg.to;
+          break;
+        }
+        elapsed -= seg.pauseAfter;
+      }
 
       setAnimPct(nextPct);
+      setPausedAt(currentPause);
 
       for (const milestone of MILESTONES) {
         if (
@@ -169,9 +197,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           setBursts((b) => ({ ...b, [milestone.at]: Date.now() }));
         }
       }
-      if (nextPct < 1) {
-        lastBurstRef.current = null;
-      }
+
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -182,6 +208,10 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   }, [showReal]);
 
   const displayPct = showReal ? realPct : animPct;
+  const pausedMilestone = !showReal && pausedAt !== null
+    ? MILESTONES.find((m) => m.at === pausedAt)
+    : null;
+
 
 
 
