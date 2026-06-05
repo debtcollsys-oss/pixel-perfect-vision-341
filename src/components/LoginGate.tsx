@@ -95,10 +95,25 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleIdNext(e: React.FormEvent) {
     e.preventDefault();
     const eid = employeeId.trim();
     if (!eid) { toast.error("أدخل الرقم الوظيفي"); return; }
+    if (role === "admin") {
+      if (eid !== ADMIN_USERNAME) { toast.error("رقم الإدارة غير صحيح"); return; }
+      setResolvedName("الإدارة");
+    } else {
+      const found = COLLECTORS.find((c) => c.employeeId === eid);
+      if (!found) { toast.error("الرقم الوظيفي غير موجود"); return; }
+      setResolvedName(found.collector);
+    }
+    setPassword("");
+    setStep("password");
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const eid = employeeId.trim();
     if (!password) { toast.error("أدخل كلمة المرور"); return; }
     setBusy(true);
     try {
@@ -138,6 +153,8 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
     setRole("collector");
     setEmployeeId("");
     setPassword("");
+    setStep("id");
+    setResolvedName("");
     setLoginOpen(true);
   };
 
