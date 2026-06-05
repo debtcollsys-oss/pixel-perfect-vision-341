@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock, Scale, FileText, RefreshCw, LogOut, Eraser } from "lucide-react";
+import { ShieldCheck, Upload, UserPlus, Inbox, ArrowRight, Trash2, Eye, CheckCircle2, XCircle, Clock, Scale, FileText, RefreshCw, LogOut, Eraser, Users, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from "@/lib/wallet-store";
 import collectors from "@/data/collectors.json";
@@ -15,7 +15,9 @@ import { CasesUploadPanel, RequestsUploadPanel, WalletChangesPanel } from "@/com
 import MappingReview, { loadDefaultMapping } from "@/components/MappingReview";
 import { detectMapping } from "@/lib/mapping-engine";
 import { canonicalToCustomer } from "@/lib/canonical-to-customer";
-import { clearSession } from "@/components/LoginGate";
+import { clearSession, DISABLED_KEY } from "@/components/LoginGate";
+import { useServerFn } from "@tanstack/react-start";
+import { getCollectorsStats } from "@/lib/collectors-stats.functions";
 
 type Collector = { supervisor: string; collector: string; employeeId: string };
 const BASE_COLLECTORS = collectors as Collector[];
