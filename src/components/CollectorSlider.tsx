@@ -291,6 +291,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
         )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span
+            dir="rtl"
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
