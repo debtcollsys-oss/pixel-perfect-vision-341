@@ -129,10 +129,10 @@ export function CollectorSlider({
 }
 
 const MILESTONES = [
-  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
-  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
-  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
-  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
+  { at: 60, label: "2%", pctLabel: "2%", text: "إنسنتفك ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
+  { at: 70, label: "2.5%", pctLabel: "2.5%", text: "إنسنتفك ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
+  { at: 85, label: "3%", pctLabel: "3%", text: "إنسنتفك ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
+  { at: 100, label: "3.5%", pctLabel: "3.5%", text: "إنسنتفك ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
@@ -290,17 +290,32 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           </div>
         )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span
-            dir="rtl"
-            className="text-[11px] font-extrabold tabular-nums text-white"
-            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
-          >
-            {pausedMilestone
-              ? showMessage
-                ? pausedMilestone.text
-                : ""
-              : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
-          </span>
+          {pausedMilestone && showMessage ? (
+            <span
+              dir="rtl"
+              className="flex items-center gap-1 text-[11px] font-extrabold tabular-nums text-white"
+              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+            >
+              <span>إنسنتفك</span>
+              <span
+                className="text-[15px] font-black"
+                style={{ color: pausedMilestone.color, textShadow: `0 0 8px ${pausedMilestone.color}` }}
+              >
+                {pausedMilestone.pctLabel}
+              </span>
+              <span>{pausedMilestone.text.replace("إنسنتفك ", "")}</span>
+            </span>
+          ) : (
+            <span
+              dir="rtl"
+              className="text-[11px] font-extrabold tabular-nums text-white"
+              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+            >
+              {pausedMilestone
+                ? ""
+                : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
+            </span>
+          )}
         </div>
       </div>
 
