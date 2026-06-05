@@ -39,7 +39,6 @@ export function CollectorSlider({
   const secs = Math.floor((diff % 60000) / 1000);
 
   const pct = Math.min(100, (collected / TARGET) * 100);
-  const remaining = Math.max(0, TARGET - collected);
 
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
