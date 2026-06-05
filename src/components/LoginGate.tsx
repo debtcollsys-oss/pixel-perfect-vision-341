@@ -20,9 +20,20 @@ const ADMIN_USERNAME = "666666";
 const ADMIN_PASSWORD = "123456";
 const COLLECTOR_PASSWORD = "123456";
 const STORAGE_KEY = "wallet:session";
+export const DISABLED_KEY = "wallet:collectors:disabled";
 
 type Collector = { supervisor: string; collector: string; employeeId: string };
 const COLLECTORS = collectors as Collector[];
+
+function isCollectorDisabled(eid: string): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const arr = JSON.parse(localStorage.getItem(DISABLED_KEY) || "[]") as string[];
+    return Array.isArray(arr) && arr.includes(eid);
+  } catch {
+    return false;
+  }
+}
 
 export type Session = {
   role: "collector" | "admin";
