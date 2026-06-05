@@ -136,47 +136,40 @@ const MILESTONES = [
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
-  const [animPct, setAnimPct] = useState(60);
+  const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (showReal) return;
-    const cycleMs = 7600;
+    const cycleMs = 30000;
     let raf = 0;
     let cancelled = false;
+    let startTs = 0;
 
-    const phases = [
-      { start: 0, end: 0.36, from: 0, to: 60 },
-      { start: 0.36, end: 0.47, from: 60, to: 60 },
-      { start: 0.47, end: 0.57, from: 60, to: 70 },
-      { start: 0.57, end: 0.66, from: 70, to: 70 },
-      { start: 0.66, end: 0.78, from: 70, to: 85 },
-      { start: 0.78, end: 0.86, from: 85, to: 85 },
-      { start: 0.86, end: 0.96, from: 85, to: 100 },
-      { start: 0.96, end: 1, from: 100, to: 100 },
-    ];
-
-    const ease = (k: number) => 1 - Math.pow(1 - k, 3);
+    const ease = (k: number) =>
+      k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
 
     const tick = (t: number) => {
       if (cancelled) return;
-      const progress = (t % cycleMs) / cycleMs;
-      const phase = phases.find((p) => progress >= p.start && progress < p.end) ?? phases[0];
-      const local = Math.min(1, Math.max(0, (progress - phase.start) / (phase.end - phase.start)));
-      const nextPct = phase.from + (phase.to - phase.from) * ease(local);
+      if (!startTs) startTs = t;
+      const elapsed = (t - startTs) % cycleMs;
+      const k = elapsed / cycleMs;
+      const nextPct = 100 * ease(k);
 
       setAnimPct(nextPct);
 
       for (const milestone of MILESTONES) {
-        if (nextPct >= milestone.at && lastBurstRef.current !== milestone.at) {
+        if (
+          nextPct >= milestone.at &&
+          (lastBurstRef.current === null || milestone.at > lastBurstRef.current)
+        ) {
           lastBurstRef.current = milestone.at;
           setBursts((b) => ({ ...b, [milestone.at]: Date.now() }));
-          break;
         }
       }
-      if (nextPct < 8) {
+      if (nextPct < 1) {
         lastBurstRef.current = null;
       }
       raf = requestAnimationFrame(tick);
@@ -211,7 +204,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           }}
         />
         <div
-          className="absolute inset-y-0 left-0 transition-[width] duration-300"
+          className="absolute inset-y-0 left-0"
           style={{
             width: `${displayPct}%`,
             background:
