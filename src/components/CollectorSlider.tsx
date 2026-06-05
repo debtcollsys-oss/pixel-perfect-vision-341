@@ -114,20 +114,15 @@ export function CollectorSlider({
 
         {/* Achievement - interactive gradient indicator */}
         <div>
-          <div className="flex items-center justify-between text-[11px] opacity-85 mb-1">
-            <div className="flex items-center gap-1.5">
-              <Target className="size-3.5" />
-              <span>مؤشر التحقيق</span>
-            </div>
-            <span className="tabular-nums">{pct.toFixed(1)}%</span>
-          </div>
-          <div className="flex items-baseline justify-between gap-2 mb-1.5">
-            <div className="text-base font-extrabold tabular-nums leading-none">
-              {formatSAR(collected)}
-            </div>
-            <div className="text-[10px] opacity-80">من {formatSAR(TARGET)} · متبقي {formatSAR(remaining)}</div>
+          <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-2">
+            <Target className="size-3.5" />
+            <span>مؤشر التحقيق</span>
           </div>
           <AchievementMeter pct={pct} />
+          <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
+            <span className="font-bold">{formatSAR(collected)} SAR</span>
+            <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
+          </div>
         </div>
       </div>
     </Card>
