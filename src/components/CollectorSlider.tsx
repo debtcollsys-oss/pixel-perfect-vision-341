@@ -148,7 +148,7 @@ const MILESTONES = [
   { at: 100, label: "3.5%", pctLabel: "3.5%", text: "إنسنتفك ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
-function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
+function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: number; staticMode?: boolean }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
