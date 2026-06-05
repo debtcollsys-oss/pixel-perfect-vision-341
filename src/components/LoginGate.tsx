@@ -116,6 +116,7 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
     } else {
       const found = COLLECTORS.find((c) => c.employeeId === eid);
       if (!found) { toast.error("الرقم الوظيفي غير موجود"); return; }
+      if (isCollectorDisabled(eid)) { toast.error("تم إغلاق حساب هذا المحصل من قبل الإدارة"); return; }
       setResolvedName(found.collector);
     }
     setPassword("");
