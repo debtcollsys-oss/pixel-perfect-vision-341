@@ -129,10 +129,10 @@ export function CollectorSlider({
 }
 
 const MILESTONES = [
-  { at: 60, label: "2%" },
-  { at: 70, label: "2.5%" },
-  { at: 85, label: "3%" },
-  { at: 100, label: "3.5%" },
+  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR" },
+  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR" },
+  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR" },
+  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR" },
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
@@ -145,7 +145,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   useEffect(() => {
     if (showReal) return;
 
-    const pauseMs = 3000;
+    const pauseMs = 4000;
     const segments = [
       { from: 0, to: 60, dur: 6000, pauseAfter: pauseMs },
       { from: 60, to: 70, dur: 2500, pauseAfter: pauseMs },
@@ -256,7 +256,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
             {pausedMilestone
-              ? `إنسنتفك ${pausedMilestone.label}`
+              ? pausedMilestone.text
               : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
           </span>
         </div>
