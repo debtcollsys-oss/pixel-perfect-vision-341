@@ -136,7 +136,7 @@ const MILESTONES = [
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
-  const [animPct, setAnimPct] = useState(60);
+  const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
   const lastBurstRef = useRef<number | null>(null);
