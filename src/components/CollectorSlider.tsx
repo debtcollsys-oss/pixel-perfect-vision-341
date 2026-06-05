@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Clock, Target, Users, Wallet } from "lucide-react";
 
@@ -136,52 +136,48 @@ const MILESTONES = [
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
-  const [animPct, setAnimPct] = useState(0);
+  const [animPct, setAnimPct] = useState(60);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
+  const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (showReal) return;
-    const stops = MILESTONES.map((m) => m.at);
-    let idx = 0;
-    let from = 0;
-    let to = stops[0];
-    let segStart = performance.now();
-    let holdUntil = 0;
+    const cycleMs = 7600;
     let raf = 0;
     let cancelled = false;
 
-    const segDur = (a: number, b: number) => 1200 + Math.abs(b - a) * 30;
+    const phases = [
+      { start: 0, end: 0.36, from: 0, to: 60 },
+      { start: 0.36, end: 0.47, from: 60, to: 60 },
+      { start: 0.47, end: 0.57, from: 60, to: 70 },
+      { start: 0.57, end: 0.66, from: 70, to: 70 },
+      { start: 0.66, end: 0.78, from: 70, to: 85 },
+      { start: 0.78, end: 0.86, from: 85, to: 85 },
+      { start: 0.86, end: 0.96, from: 85, to: 100 },
+      { start: 0.96, end: 1, from: 100, to: 100 },
+    ];
+
+    const ease = (k: number) => 1 - Math.pow(1 - k, 3);
 
     const tick = (t: number) => {
       if (cancelled) return;
-      if (holdUntil > 0) {
-        if (t >= holdUntil) {
-          holdUntil = 0;
-          from = to;
-          idx += 1;
-          if (idx >= stops.length) {
-            idx = 0;
-            from = 0;
-            to = stops[0];
-            setAnimPct(0);
-          } else {
-            to = stops[idx];
-          }
-          segStart = t;
+      const progress = (t % cycleMs) / cycleMs;
+      const phase = phases.find((p) => progress >= p.start && progress < p.end) ?? phases[0];
+      const local = Math.min(1, Math.max(0, (progress - phase.start) / (phase.end - phase.start)));
+      const nextPct = phase.from + (phase.to - phase.from) * ease(local);
+
+      setAnimPct(nextPct);
+
+      for (const milestone of MILESTONES) {
+        if (nextPct >= milestone.at && lastBurstRef.current !== milestone.at) {
+          lastBurstRef.current = milestone.at;
+          setBursts((b) => ({ ...b, [milestone.at]: Date.now() }));
+          break;
         }
-        raf = requestAnimationFrame(tick);
-        return;
       }
-      const dur = segDur(from, to);
-      const k = Math.min(1, (t - segStart) / dur);
-      const eased = 1 - Math.pow(1 - k, 3);
-      const cur = from + (to - from) * eased;
-      setAnimPct(cur);
-      if (k >= 1) {
-        const reached = to;
-        setBursts((b) => ({ ...b, [reached]: Date.now() }));
-        holdUntil = t + 900;
+      if (nextPct < 8) {
+        lastBurstRef.current = null;
       }
       raf = requestAnimationFrame(tick);
     };
