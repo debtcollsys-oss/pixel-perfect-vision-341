@@ -378,3 +378,33 @@ function Confetti() {
   );
 }
 
+function BigFireworks({ color }: { color: string }) {
+  const sparks = Array.from({ length: 22 });
+  const palette = ["#fde68a", "#fff7ed", "#fca5a5", "#93c5fd", "#fcd34d", color];
+  return (
+    <div className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+      {sparks.map((_, i) => {
+        const angle = (Math.PI * 2 * i) / sparks.length;
+        const dist = 22 + Math.random() * 22;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        const c = palette[i % palette.length];
+        return (
+          <span
+            key={i}
+            className="absolute block w-1.5 h-1.5 rounded-full"
+            style={{
+              background: c,
+              boxShadow: `0 0 10px ${c}, 0 0 16px ${c}`,
+              ["--dx" as any]: `${dx}px`,
+              ["--dy" as any]: `${dy}px`,
+              animation: "sparkFly 700ms ease-out forwards",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+
