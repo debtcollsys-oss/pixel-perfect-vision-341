@@ -117,7 +117,7 @@ export function CollectorSlider({
             <Target className="size-3.5" />
             <span>مؤشر التحقيق</span>
           </div>
-          <AchievementMeter pct={pct} />
+          <AchievementMeter pct={pct} realPct={pct} />
           <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
@@ -135,11 +135,13 @@ const MILESTONES = [
   { at: 100, label: "3.5%" },
 ];
 
-function AchievementMeter({ pct: _pct }: { pct: number }) {
+function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
+  const [showReal, setShowReal] = useState(false);
 
   useEffect(() => {
+    if (showReal) return;
     const stops = MILESTONES.map((m) => m.at);
     let idx = 0;
     let from = 0;
@@ -159,7 +161,6 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
           from = to;
           idx += 1;
           if (idx >= stops.length) {
-            // restart loop
             idx = 0;
             from = 0;
             to = stops[0];
@@ -189,11 +190,22 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [showReal]);
+
+  const displayPct = showReal ? realPct : animPct;
+
 
 
   return (
-    <div className="relative w-full" dir="ltr">
+    <div
+      className="relative w-full select-none"
+      dir="ltr"
+      onMouseEnter={() => setShowReal(true)}
+      onMouseLeave={() => setShowReal(false)}
+      onTouchStart={() => setShowReal(true)}
+      onTouchEnd={() => setShowReal(false)}
+      onTouchCancel={() => setShowReal(false)}
+    >
       <div className="relative h-6 w-full rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
         <div
           className="absolute inset-0 opacity-50"
@@ -203,9 +215,9 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
           }}
         />
         <div
-          className="absolute inset-y-0 left-0"
+          className="absolute inset-y-0 left-0 transition-[width] duration-300"
           style={{
-            width: `${animPct}%`,
+            width: `${displayPct}%`,
             background:
               "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)",
             boxShadow: "0 0 12px rgba(34,197,94,0.4)",
@@ -224,14 +236,15 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
-            {animPct.toFixed(1)}%
+            {displayPct.toFixed(1)}%{showReal ? " (فعلي)" : ""}
           </span>
         </div>
       </div>
 
       <div className="relative h-10 mt-1">
         {MILESTONES.map((m) => {
-          const reached = animPct >= m.at;
+          const reached = displayPct >= m.at;
+
           const burst = bursts[m.at];
           return (
             <div
