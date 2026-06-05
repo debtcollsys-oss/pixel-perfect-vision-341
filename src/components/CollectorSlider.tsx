@@ -117,7 +117,7 @@ export function CollectorSlider({
             <Target className="size-3.5" />
             <span>مؤشر التحقيق</span>
           </div>
-          <AchievementMeter pct={pct} />
+          <AchievementMeter pct={pct} realPct={pct} />
           <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
