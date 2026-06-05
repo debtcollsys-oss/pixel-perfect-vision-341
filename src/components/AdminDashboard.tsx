@@ -45,7 +45,7 @@ type ThirdPartyReq = {
   body: string;
 };
 
-type Tab = "home" | "wallet" | "cases" | "requests-file" | "changes" | "members" | "requests";
+type Tab = "home" | "wallet" | "cases" | "requests-file" | "changes" | "members" | "requests" | "collectors";
 
 export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>("home");
