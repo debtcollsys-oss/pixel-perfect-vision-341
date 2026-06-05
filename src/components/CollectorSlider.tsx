@@ -115,9 +115,22 @@ export function CollectorSlider({
         <div>
           <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-2">
             <Target className="size-3.5" />
-            <span>مؤشر التحقيق</span>
+            <span>مؤشر التحقيق التفاعلي</span>
           </div>
           <AchievementMeter pct={pct} realPct={pct} />
+          <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
+            <span className="font-bold">{formatSAR(collected)} SAR</span>
+            <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
+          </div>
+        </div>
+
+        {/* Achievement - real static indicator */}
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-2">
+            <Target className="size-3.5" />
+            <span>مؤشر التحقيق الفعلي</span>
+          </div>
+          <AchievementMeter pct={pct} realPct={pct} staticMode />
           <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
@@ -135,7 +148,7 @@ const MILESTONES = [
   { at: 100, label: "3.5%", pctLabel: "3.5%", text: "إنسنتفك ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
-function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
+function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: number; staticMode?: boolean }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
@@ -144,7 +157,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (showReal) return;
+    if (showReal || staticMode) return;
 
     const pauseMs = 4000;
     const segments = [
@@ -211,7 +224,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
     };
   }, [showReal]);
 
-  const displayPct = showReal ? realPct : animPct;
+  const displayPct = showReal || staticMode ? realPct : animPct;
   const pausedMilestone = !showReal && pausedAt !== null
     ? MILESTONES.find((m) => m.at === pausedAt)
     : null;
