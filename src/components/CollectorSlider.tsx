@@ -224,7 +224,7 @@ function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: numbe
     };
   }, [showReal]);
 
-  const displayPct = showReal ? realPct : animPct;
+  const displayPct = showReal || staticMode ? realPct : animPct;
   const pausedMilestone = !showReal && pausedAt !== null
     ? MILESTONES.find((m) => m.at === pausedAt)
     : null;
