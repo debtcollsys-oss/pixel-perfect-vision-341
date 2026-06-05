@@ -96,6 +96,7 @@ export default function AdminDashboard() {
         {tab === "changes" && <WalletChangesPanel />}
         {tab === "members" && <MembersPanel />}
         {tab === "requests" && <RequestsPanel />}
+        {tab === "collectors" && <CollectorsDataPanel />}
       </main>
     </div>
   );
