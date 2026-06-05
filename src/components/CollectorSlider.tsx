@@ -115,9 +115,22 @@ export function CollectorSlider({
         <div>
           <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-2">
             <Target className="size-3.5" />
-            <span>مؤشر التحقيق</span>
+            <span>مؤشر التحقيق التفاعلي</span>
           </div>
           <AchievementMeter pct={pct} realPct={pct} />
+          <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
+            <span className="font-bold">{formatSAR(collected)} SAR</span>
+            <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
+          </div>
+        </div>
+
+        {/* Achievement - real static indicator */}
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-2">
+            <Target className="size-3.5" />
+            <span>مؤشر التحقيق الفعلي</span>
+          </div>
+          <AchievementMeter pct={pct} realPct={pct} staticMode />
           <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
