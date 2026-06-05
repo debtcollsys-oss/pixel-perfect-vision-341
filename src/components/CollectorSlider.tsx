@@ -290,17 +290,32 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           </div>
         )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span
-            dir="rtl"
-            className="text-[11px] font-extrabold tabular-nums text-white"
-            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
-          >
-            {pausedMilestone
-              ? showMessage
-                ? pausedMilestone.text
-                : ""
-              : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
-          </span>
+          {pausedMilestone && showMessage ? (
+            <span
+              dir="rtl"
+              className="flex items-center gap-1 text-[11px] font-extrabold tabular-nums text-white"
+              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+            >
+              <span>إنسنتفك</span>
+              <span
+                className="text-[15px] font-black"
+                style={{ color: pausedMilestone.color, textShadow: `0 0 8px ${pausedMilestone.color}` }}
+              >
+                {pausedMilestone.pctLabel}
+              </span>
+              <span>{pausedMilestone.text.replace("إنسنتفك ", "")}</span>
+            </span>
+          ) : (
+            <span
+              dir="rtl"
+              className="text-[11px] font-extrabold tabular-nums text-white"
+              style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+            >
+              {pausedMilestone
+                ? ""
+                : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
+            </span>
+          )}
         </div>
       </div>
 
