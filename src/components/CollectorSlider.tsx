@@ -112,7 +112,7 @@ export function CollectorSlider({
           </div>
         </div>
 
-        {/* Achievement */}
+        {/* Achievement - interactive gradient indicator */}
         <div>
           <div className="flex items-center justify-between text-[11px] opacity-85 mb-1">
             <div className="flex items-center gap-1.5">
@@ -121,23 +121,89 @@ export function CollectorSlider({
             </div>
             <span className="tabular-nums">{pct.toFixed(1)}%</span>
           </div>
-          <div className="flex items-baseline justify-between gap-2">
-            <div className="text-xl font-extrabold tabular-nums leading-none">
+          <div className="flex items-baseline justify-between gap-2 mb-1.5">
+            <div className="text-base font-extrabold tabular-nums leading-none">
               {formatSAR(collected)}
             </div>
-            <div className="text-[10px] opacity-80">من {formatSAR(TARGET)}</div>
+            <div className="text-[10px] opacity-80">من {formatSAR(TARGET)} · متبقي {formatSAR(remaining)}</div>
           </div>
-          <div className="mt-1.5 h-2 w-full rounded-full bg-primary-foreground/20 overflow-hidden">
-            <div
-              className="h-full bg-primary-foreground transition-all duration-700"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="text-[10px] opacity-80 text-left mt-1">
-            المتبقي: {formatSAR(remaining)}
-          </div>
+          <AchievementMeter pct={pct} />
         </div>
       </div>
     </Card>
+  );
+}
+
+const MILESTONES = [
+  { at: 60, label: "2%" },
+  { at: 70, label: "2.5%" },
+  { at: 85, label: "3%" },
+  { at: 100, label: "3.5%" },
+];
+
+function AchievementMeter({ pct }: { pct: number }) {
+  return (
+    <div className="relative w-full" dir="ltr">
+      <div className="relative h-3 w-full rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
+        <div
+          className="absolute inset-0 opacity-60"
+          style={{
+            background:
+              "linear-gradient(90deg,#7f1d1d,#9a3412,#a16207,#3f6212,#14532d)",
+          }}
+        />
+        <div
+          className="absolute inset-y-0 left-0 transition-[width] duration-700"
+          style={{
+            width: `${pct}%`,
+            background:
+              "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)",
+          }}
+        />
+        <div
+          className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none mix-blend-overlay"
+          style={{
+            background:
+              "linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent)",
+            animation: "meterShimmer 2.4s linear infinite",
+          }}
+        />
+      </div>
+
+      <div className="relative h-8 mt-1">
+        {MILESTONES.map((m) => {
+          const reached = pct >= m.at;
+          return (
+            <div
+              key={m.at}
+              className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+              style={{ left: `${m.at}%` }}
+            >
+              <div
+                className={`w-px h-2 transition-all ${reached ? "bg-emerald-300" : "bg-transparent"}`}
+                style={reached ? { boxShadow: "0 0 6px #6ee7b7" } : undefined}
+              />
+              <div
+                className={`mt-0.5 size-1.5 rounded-full transition-all duration-500 ${reached ? "bg-emerald-300 scale-100 opacity-100 animate-pulse" : "scale-0 opacity-0"}`}
+                style={reached ? { boxShadow: "0 0 8px #6ee7b7, 0 0 14px #34d399" } : undefined}
+              />
+              <div
+                className={`mt-0.5 text-[9px] font-bold tabular-nums text-emerald-300 transition-all duration-500 ${reached ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+                style={reached ? { textShadow: "0 0 6px rgba(110,231,183,0.8)" } : undefined}
+              >
+                {m.label}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <style>{`
+        @keyframes meterShimmer {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(450%); }
+        }
+      `}</style>
+    </div>
   );
 }
