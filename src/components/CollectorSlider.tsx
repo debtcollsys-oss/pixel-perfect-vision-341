@@ -129,10 +129,10 @@ export function CollectorSlider({
 }
 
 const MILESTONES = [
-  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR" },
-  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR" },
-  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR" },
-  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR" },
+  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
+  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
+  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
+  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
@@ -140,6 +140,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
   const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [pauseElapsed, setPauseElapsed] = useState(0);
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -170,6 +171,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
       let elapsed = total;
       let nextPct = 0;
       let currentPause: number | null = null;
+      let currentPauseElapsed = 0;
       for (const seg of segments) {
         if (elapsed < seg.dur) {
           const k = elapsed / seg.dur;
@@ -180,6 +182,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
         if (elapsed < seg.pauseAfter) {
           nextPct = seg.to;
           currentPause = seg.to;
+          currentPauseElapsed = elapsed;
           break;
         }
         elapsed -= seg.pauseAfter;
@@ -187,6 +190,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
 
       setAnimPct(nextPct);
       setPausedAt(currentPause);
+      setPauseElapsed(currentPauseElapsed);
 
       for (const milestone of MILESTONES) {
         if (
@@ -211,6 +215,22 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const pausedMilestone = !showReal && pausedAt !== null
     ? MILESTONES.find((m) => m.at === pausedAt)
     : null;
+
+  // Pause phases: 0-700ms = fireworks, 700-1400ms = color fill transition, 1400ms+ = message
+  const FIREWORKS_MS = 700;
+  const COLOR_FILL_MS = 700;
+  const showFireworks = !!pausedMilestone && pauseElapsed < FIREWORKS_MS;
+  const colorFillT = pausedMilestone
+    ? Math.min(1, Math.max(0, (pauseElapsed - FIREWORKS_MS) / COLOR_FILL_MS))
+    : 0;
+  const showMessage = !!pausedMilestone && pauseElapsed >= FIREWORKS_MS + COLOR_FILL_MS;
+
+  const barBackground = pausedMilestone
+    ? colorFillT >= 1
+      ? pausedMilestone.color
+      : `linear-gradient(90deg, #ef4444, #f97316, #eab308, #84cc16, #22c55e), ${pausedMilestone.color}`
+    : "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)";
+
 
 
 
