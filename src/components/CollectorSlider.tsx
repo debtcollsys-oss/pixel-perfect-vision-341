@@ -204,7 +204,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           }}
         />
         <div
-          className="absolute inset-y-0 left-0 transition-[width] duration-300"
+          className="absolute inset-y-0 left-0"
           style={{
             width: `${displayPct}%`,
             background:
