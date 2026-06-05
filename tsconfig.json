@@ -22,6 +22,9 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src", "app"],
+  "exclude": ["node_modules", "dist", ".output", ".vinxi", ".tanstack"]
 }
