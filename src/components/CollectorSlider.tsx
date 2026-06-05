@@ -135,34 +135,58 @@ const MILESTONES = [
   { at: 100, label: "3.5%" },
 ];
 
-function AchievementMeter({ pct }: { pct: number }) {
+function AchievementMeter({ pct: _pct }: { pct: number }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
-  const reachedRef = useState<Set<number>>(() => new Set<number>())[0];
 
   useEffect(() => {
-    const start = animPct;
-    const end = pct;
-    const dur = 900;
-    const t0 = performance.now();
     let raf = 0;
+    let cancelled = false;
+    const stops = MILESTONES.map((m) => m.at);
+    let idx = 0;
+    let from = 0;
+    let to = stops[0];
+    let segStart = performance.now();
+    const segDur = () => 1400 + (to - from) * 25;
+    const hold = 800;
+    let holding = false;
+    let holdStart = 0;
+
     const tick = (t: number) => {
-      const k = Math.min(1, (t - t0) / dur);
-      const eased = 1 - Math.pow(1 - k, 3);
-      const cur = start + (end - start) * eased;
-      setAnimPct(cur);
-      MILESTONES.forEach((m) => {
-        if (cur >= m.at && !reachedRef.has(m.at)) {
-          reachedRef.add(m.at);
-          setBursts((b) => ({ ...b, [m.at]: Date.now() }));
+      if (cancelled) return;
+      if (holding) {
+        if (t - holdStart >= hold) {
+          holding = false;
+          from = to;
+          idx = idx + 1;
+          if (idx >= stops.length) {
+            idx = 0;
+            from = 0;
+            setAnimPct(0);
+          }
+          to = stops[idx];
+          segStart = t;
         }
-      });
-      if (k < 1) raf = requestAnimationFrame(tick);
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const k = Math.min(1, (t - segStart) / segDur());
+      const eased = 1 - Math.pow(1 - k, 3);
+      const cur = from + (to - from) * eased;
+      setAnimPct(cur);
+      if (k >= 1) {
+        setBursts((b) => ({ ...b, [to]: Date.now() }));
+        holding = true;
+        holdStart = t;
+      }
+      raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pct]);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 
   return (
     <div className="relative w-full" dir="ltr">
