@@ -117,6 +117,7 @@ function HomeGrid({ onSelect }: { onSelect: (t: Tab) => void }) {
     { id: "changes", title: "إضافة تغييرات على المحفظة الحالية", desc: "استبعاد / تدوير / تحديث الحسابات", icon: RefreshCw },
     { id: "members", title: "إضافة أعضاء في القروب", desc: "تفعيل المحصلين للوصول إلى القروب", icon: UserPlus },
     { id: "requests", title: "استقبال طلبات الطرف الثالث", desc: "مراجعة الطلبات المقدمة من المحصلين", icon: Inbox, badge: pendingCount },
+    { id: "collectors", title: "بيانات المحصلين", desc: "عرض المحصلين وإحصائياتهم وتمكين/إغلاق الدخول", icon: Users },
   ];
 
   const clearCache = async () => {
