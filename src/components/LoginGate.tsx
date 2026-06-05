@@ -203,55 +203,82 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
         >
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-center text-sm text-white">
-              {role === "admin" ? "دخول الإدارة" : "تسجيل دخول المحصّل"}
+              {step === "password"
+                ? (role === "admin" ? "الإدارة" : `مرحباً ${resolvedName}`)
+                : (role === "admin" ? "دخول الإدارة" : "تسجيل دخول المحصّل")}
             </DialogTitle>
             <DialogDescription className="text-center text-[10px] text-white/60">
-              أدخل بياناتك للمتابعة
+              {step === "password" ? "أدخل كلمة المرور للمتابعة" : "أدخل الرقم الوظيفي"}
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-2 pt-1">
-            <Input
-              value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
-              inputMode="numeric"
-              autoFocus
-              className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40"
-            />
-            <Input
-              type="password"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              autoComplete="one-time-code"
-              value={password}
-              onChange={(e) => setPassword(e.target.value.replace(/\D/g, ""))}
-              className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40"
-            />
-            <div className="flex items-center gap-2 pt-1">
-              <Button
-                type="submit"
-                disabled={busy}
-                className="flex-1 h-9 bg-emerald-500 hover:bg-emerald-600 text-white"
-              >
-                {busy ? "..." : "دخول"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setRole((r) => (r === "admin" ? "collector" : "admin"));
-                  setEmployeeId("");
-                  setPassword("");
-                }}
-                className="h-9 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10 gap-1"
-                title="دخول الإدارة"
-              >
-                <ShieldCheck className="size-3.5" />
-                {role === "admin" ? "محصّل" : "إدارة"}
-              </Button>
-            </div>
-          </form>
+          {step === "id" ? (
+            <form onSubmit={handleIdNext} className="space-y-2 pt-1">
+              <Input
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                inputMode="numeric"
+                autoFocus
+                placeholder="الرقم الوظيفي"
+                className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40 text-center"
+              />
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="submit"
+                  className="flex-1 h-9 bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  التالي
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setRole((r) => (r === "admin" ? "collector" : "admin"));
+                    setEmployeeId("");
+                    setPassword("");
+                  }}
+                  className="h-9 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10 gap-1"
+                  title="دخول الإدارة"
+                >
+                  <ShieldCheck className="size-3.5" />
+                  {role === "admin" ? "محصّل" : "إدارة"}
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-2 pt-1">
+              <Input
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="كلمة المرور"
+                value={password}
+                onChange={(e) => setPassword(e.target.value.replace(/\D/g, ""))}
+                className="h-9 bg-white/10 border-white/15 text-white placeholder:text-white/40 text-center"
+              />
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="flex-1 h-9 bg-emerald-500 hover:bg-emerald-600 text-white"
+                >
+                  {busy ? "..." : "دخول"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setStep("id"); setPassword(""); }}
+                  className="h-9 px-2 text-[10px] text-white/80 hover:text-white hover:bg-white/10"
+                >
+                  رجوع
+                </Button>
+              </div>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
