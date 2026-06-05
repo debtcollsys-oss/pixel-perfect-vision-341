@@ -129,10 +129,10 @@ export function CollectorSlider({
 }
 
 const MILESTONES = [
-  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR" },
-  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR" },
-  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR" },
-  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR" },
+  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
+  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
+  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
+  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
@@ -140,6 +140,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const [bursts, setBursts] = useState<Record<number, number>>({});
   const [showReal, setShowReal] = useState(false);
   const [pausedAt, setPausedAt] = useState<number | null>(null);
+  const [pauseElapsed, setPauseElapsed] = useState(0);
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -170,6 +171,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
       let elapsed = total;
       let nextPct = 0;
       let currentPause: number | null = null;
+      let currentPauseElapsed = 0;
       for (const seg of segments) {
         if (elapsed < seg.dur) {
           const k = elapsed / seg.dur;
@@ -180,6 +182,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
         if (elapsed < seg.pauseAfter) {
           nextPct = seg.to;
           currentPause = seg.to;
+          currentPauseElapsed = elapsed;
           break;
         }
         elapsed -= seg.pauseAfter;
@@ -187,6 +190,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
 
       setAnimPct(nextPct);
       setPausedAt(currentPause);
+      setPauseElapsed(currentPauseElapsed);
 
       for (const milestone of MILESTONES) {
         if (
@@ -211,6 +215,22 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const pausedMilestone = !showReal && pausedAt !== null
     ? MILESTONES.find((m) => m.at === pausedAt)
     : null;
+
+  // Pause phases: 0-700ms = fireworks, 700-1400ms = color fill transition, 1400ms+ = message
+  const FIREWORKS_MS = 700;
+  const COLOR_FILL_MS = 700;
+  const showFireworks = !!pausedMilestone && pauseElapsed < FIREWORKS_MS;
+  const colorFillT = pausedMilestone
+    ? Math.min(1, Math.max(0, (pauseElapsed - FIREWORKS_MS) / COLOR_FILL_MS))
+    : 0;
+  const showMessage = !!pausedMilestone && pauseElapsed >= FIREWORKS_MS + COLOR_FILL_MS;
+
+  const barBackground = pausedMilestone
+    ? colorFillT >= 1
+      ? pausedMilestone.color
+      : `linear-gradient(90deg, #ef4444, #f97316, #eab308, #84cc16, #22c55e), ${pausedMilestone.color}`
+    : "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)";
+
 
 
 
@@ -242,6 +262,17 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             boxShadow: "0 0 12px rgba(34,197,94,0.4)",
           }}
         />
+        {pausedMilestone && (
+          <div
+            className="absolute inset-y-0 left-0"
+            style={{
+              width: `${displayPct}%`,
+              background: pausedMilestone.color,
+              opacity: colorFillT,
+              boxShadow: `0 0 16px ${pausedMilestone.color}`,
+            }}
+          />
+        )}
         <div
           className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none mix-blend-overlay"
           style={{
@@ -250,17 +281,28 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             animation: "meterShimmer 2.2s linear infinite",
           }}
         />
+        {showFireworks && pausedMilestone && (
+          <div
+            className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ left: `${pausedMilestone.at}%` }}
+          >
+            <BigFireworks color={pausedMilestone.color} />
+          </div>
+        )}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
             {pausedMilestone
-              ? pausedMilestone.text
+              ? showMessage
+                ? pausedMilestone.text
+                : ""
               : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
           </span>
         </div>
       </div>
+
 
       <div className="relative h-10 mt-1">
         {MILESTONES.map((m) => {
@@ -335,4 +377,34 @@ function Confetti() {
     </div>
   );
 }
+
+function BigFireworks({ color }: { color: string }) {
+  const sparks = Array.from({ length: 22 });
+  const palette = ["#fde68a", "#fff7ed", "#fca5a5", "#93c5fd", "#fcd34d", color];
+  return (
+    <div className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+      {sparks.map((_, i) => {
+        const angle = (Math.PI * 2 * i) / sparks.length;
+        const dist = 22 + Math.random() * 22;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+        const c = palette[i % palette.length];
+        return (
+          <span
+            key={i}
+            className="absolute block w-1.5 h-1.5 rounded-full"
+            style={{
+              background: c,
+              boxShadow: `0 0 10px ${c}, 0 0 16px ${c}`,
+              ["--dx" as any]: `${dx}px`,
+              ["--dy" as any]: `${dy}px`,
+              animation: "sparkFly 700ms ease-out forwards",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 
