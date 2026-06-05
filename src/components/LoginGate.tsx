@@ -81,6 +81,8 @@ export default function LoginGate({ children }: { children: React.ReactNode }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [step, setStep] = useState<"id" | "password">("id");
+  const [resolvedName, setResolvedName] = useState<string>("");
   const now = useNow();
 
   useEffect(() => {
