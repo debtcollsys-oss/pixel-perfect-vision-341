@@ -255,7 +255,9 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
-            {displayPct.toFixed(1)}%{showReal ? " (فعلي)" : ""}
+            {pausedMilestone
+              ? `إنسنتفك ${pausedMilestone.label}`
+              : `${displayPct.toFixed(1)}%${showReal ? " (فعلي)" : ""}`}
           </span>
         </div>
       </div>
