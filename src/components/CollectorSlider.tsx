@@ -157,7 +157,7 @@ function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: numbe
   const lastBurstRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (showReal) return;
+    if (showReal || staticMode) return;
 
     const pauseMs = 4000;
     const segments = [
