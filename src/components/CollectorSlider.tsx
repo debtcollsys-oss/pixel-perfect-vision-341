@@ -129,10 +129,10 @@ export function CollectorSlider({
 }
 
 const MILESTONES = [
-  { at: 60, label: "2%", text: "إنسنتفك 2% ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
-  { at: 70, label: "2.5%", text: "إنسنتفك 2.5% ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
-  { at: 85, label: "3%", text: "إنسنتفك 3% ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
-  { at: 100, label: "3.5%", text: "إنسنتفك 3.5% ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
+  { at: 60, label: "2%", pctLabel: "2%", text: "إنسنتفك ≈ تقريباً [ 4,200 - 4,830 ] SAR", color: "#eab308" },
+  { at: 70, label: "2.5%", pctLabel: "2.5%", text: "إنسنتفك ≈ تقريباً [ 6,125 - 7,350 ] SAR", color: "#a3b510" },
+  { at: 85, label: "3%", pctLabel: "3%", text: "إنسنتفك ≈ تقريباً [ 8,925 - 10,395 ] SAR", color: "#84cc16" },
+  { at: 100, label: "3.5%", pctLabel: "3.5%", text: "إنسنتفك ≈ تقريباً [ 12,250 - ∞ ] SAR", color: "#22c55e" },
 ];
 
 function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
