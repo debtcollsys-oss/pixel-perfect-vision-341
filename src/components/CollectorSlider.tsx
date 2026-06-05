@@ -135,11 +135,13 @@ const MILESTONES = [
   { at: 100, label: "3.5%" },
 ];
 
-function AchievementMeter({ pct: _pct }: { pct: number }) {
+function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
   const [animPct, setAnimPct] = useState(0);
   const [bursts, setBursts] = useState<Record<number, number>>({});
+  const [showReal, setShowReal] = useState(false);
 
   useEffect(() => {
+    if (showReal) return;
     const stops = MILESTONES.map((m) => m.at);
     let idx = 0;
     let from = 0;
@@ -159,7 +161,6 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
           from = to;
           idx += 1;
           if (idx >= stops.length) {
-            // restart loop
             idx = 0;
             from = 0;
             to = stops[0];
@@ -189,7 +190,10 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [showReal]);
+
+  const displayPct = showReal ? realPct : animPct;
+
 
 
   return (
