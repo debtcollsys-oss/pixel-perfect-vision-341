@@ -140,44 +140,47 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
   const [bursts, setBursts] = useState<Record<number, number>>({});
 
   useEffect(() => {
-    let raf = 0;
-    let cancelled = false;
     const stops = MILESTONES.map((m) => m.at);
     let idx = 0;
     let from = 0;
     let to = stops[0];
     let segStart = performance.now();
-    const segDur = () => 1400 + (to - from) * 25;
-    const hold = 800;
-    let holding = false;
-    let holdStart = 0;
+    let holdUntil = 0;
+    let raf = 0;
+    let cancelled = false;
+
+    const segDur = (a: number, b: number) => 1200 + Math.abs(b - a) * 30;
 
     const tick = (t: number) => {
       if (cancelled) return;
-      if (holding) {
-        if (t - holdStart >= hold) {
-          holding = false;
+      if (holdUntil > 0) {
+        if (t >= holdUntil) {
+          holdUntil = 0;
           from = to;
-          idx = idx + 1;
+          idx += 1;
           if (idx >= stops.length) {
+            // restart loop
             idx = 0;
             from = 0;
+            to = stops[0];
             setAnimPct(0);
+          } else {
+            to = stops[idx];
           }
-          to = stops[idx];
           segStart = t;
         }
         raf = requestAnimationFrame(tick);
         return;
       }
-      const k = Math.min(1, (t - segStart) / segDur());
+      const dur = segDur(from, to);
+      const k = Math.min(1, (t - segStart) / dur);
       const eased = 1 - Math.pow(1 - k, 3);
       const cur = from + (to - from) * eased;
       setAnimPct(cur);
       if (k >= 1) {
-        setBursts((b) => ({ ...b, [to]: Date.now() }));
-        holding = true;
-        holdStart = t;
+        const reached = to;
+        setBursts((b) => ({ ...b, [reached]: Date.now() }));
+        holdUntil = t + 900;
       }
       raf = requestAnimationFrame(tick);
     };
@@ -187,6 +190,7 @@ function AchievementMeter({ pct: _pct }: { pct: number }) {
       cancelAnimationFrame(raf);
     };
   }, []);
+
 
   return (
     <div className="relative w-full" dir="ltr">
