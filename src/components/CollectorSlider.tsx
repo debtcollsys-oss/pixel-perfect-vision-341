@@ -143,7 +143,7 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
 
   useEffect(() => {
     if (showReal) return;
-    const cycleMs = 30000;
+    const cycleMs = 20000;
     let raf = 0;
     let cancelled = false;
     let startTs = 0;
