@@ -197,7 +197,15 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
 
 
   return (
-    <div className="relative w-full" dir="ltr">
+    <div
+      className="relative w-full select-none"
+      dir="ltr"
+      onMouseEnter={() => setShowReal(true)}
+      onMouseLeave={() => setShowReal(false)}
+      onTouchStart={() => setShowReal(true)}
+      onTouchEnd={() => setShowReal(false)}
+      onTouchCancel={() => setShowReal(false)}
+    >
       <div className="relative h-6 w-full rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
         <div
           className="absolute inset-0 opacity-50"
@@ -207,9 +215,9 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
           }}
         />
         <div
-          className="absolute inset-y-0 left-0"
+          className="absolute inset-y-0 left-0 transition-[width] duration-300"
           style={{
-            width: `${animPct}%`,
+            width: `${displayPct}%`,
             background:
               "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)",
             boxShadow: "0 0 12px rgba(34,197,94,0.4)",
@@ -228,14 +236,15 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
             className="text-[11px] font-extrabold tabular-nums text-white"
             style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
           >
-            {animPct.toFixed(1)}%
+            {displayPct.toFixed(1)}%{showReal ? " (فعلي)" : ""}
           </span>
         </div>
       </div>
 
       <div className="relative h-10 mt-1">
         {MILESTONES.map((m) => {
-          const reached = animPct >= m.at;
+          const reached = displayPct >= m.at;
+
           const burst = bursts[m.at];
           return (
             <div
