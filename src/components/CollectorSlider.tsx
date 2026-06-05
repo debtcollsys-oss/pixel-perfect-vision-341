@@ -136,37 +136,75 @@ const MILESTONES = [
 ];
 
 function AchievementMeter({ pct }: { pct: number }) {
+  const [animPct, setAnimPct] = useState(0);
+  const [bursts, setBursts] = useState<Record<number, number>>({});
+  const reachedRef = useState<Set<number>>(() => new Set<number>())[0];
+
+  useEffect(() => {
+    const start = animPct;
+    const end = pct;
+    const dur = 900;
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - k, 3);
+      const cur = start + (end - start) * eased;
+      setAnimPct(cur);
+      MILESTONES.forEach((m) => {
+        if (cur >= m.at && !reachedRef.has(m.at)) {
+          reachedRef.add(m.at);
+          setBursts((b) => ({ ...b, [m.at]: Date.now() }));
+        }
+      });
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pct]);
+
   return (
     <div className="relative w-full" dir="ltr">
-      <div className="relative h-3 w-full rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
+      <div className="relative h-6 w-full rounded-full overflow-hidden bg-primary-foreground/15 ring-1 ring-primary-foreground/20">
         <div
-          className="absolute inset-0 opacity-60"
+          className="absolute inset-0 opacity-50"
           style={{
             background:
               "linear-gradient(90deg,#7f1d1d,#9a3412,#a16207,#3f6212,#14532d)",
           }}
         />
         <div
-          className="absolute inset-y-0 left-0 transition-[width] duration-700"
+          className="absolute inset-y-0 left-0"
           style={{
-            width: `${pct}%`,
+            width: `${animPct}%`,
             background:
               "linear-gradient(90deg,#ef4444,#f97316,#eab308,#84cc16,#22c55e)",
+            boxShadow: "0 0 12px rgba(34,197,94,0.4)",
           }}
         />
         <div
           className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none mix-blend-overlay"
           style={{
             background:
-              "linear-gradient(90deg,transparent,rgba(255,255,255,0.55),transparent)",
-            animation: "meterShimmer 2.4s linear infinite",
+              "linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent)",
+            animation: "meterShimmer 2.2s linear infinite",
           }}
         />
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span
+            className="text-[11px] font-extrabold tabular-nums text-white"
+            style={{ textShadow: "0 1px 3px rgba(0,0,0,0.6)" }}
+          >
+            {animPct.toFixed(1)}%
+          </span>
+        </div>
       </div>
 
-      <div className="relative h-8 mt-1">
+      <div className="relative h-10 mt-1">
         {MILESTONES.map((m) => {
-          const reached = pct >= m.at;
+          const reached = animPct >= m.at;
+          const burst = bursts[m.at];
           return (
             <div
               key={m.at}
@@ -174,19 +212,21 @@ function AchievementMeter({ pct }: { pct: number }) {
               style={{ left: `${m.at}%` }}
             >
               <div
-                className={`w-px h-2 transition-all ${reached ? "bg-emerald-300" : "bg-transparent"}`}
+                className={`w-px h-2 transition-all ${reached ? "bg-emerald-300" : "bg-emerald-300/30"}`}
                 style={reached ? { boxShadow: "0 0 6px #6ee7b7" } : undefined}
               />
               <div
-                className={`mt-0.5 size-1.5 rounded-full transition-all duration-500 ${reached ? "bg-emerald-300 scale-100 opacity-100 animate-pulse" : "scale-0 opacity-0"}`}
-                style={reached ? { boxShadow: "0 0 8px #6ee7b7, 0 0 14px #34d399" } : undefined}
-              />
-              <div
-                className={`mt-0.5 text-[9px] font-bold tabular-nums text-emerald-300 transition-all duration-500 ${reached ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1"}`}
+                className={`mt-0.5 text-[10px] font-bold tabular-nums transition-all duration-500 ${reached ? "text-emerald-300 opacity-100" : "text-emerald-300/40 opacity-70"}`}
                 style={reached ? { textShadow: "0 0 6px rgba(110,231,183,0.8)" } : undefined}
               >
                 {m.label}
               </div>
+              <div className="text-[9px] tabular-nums text-white/70 mt-0.5">
+                {m.at}%
+              </div>
+              {burst && (
+                <Confetti key={burst} />
+              )}
             </div>
           );
         })}
@@ -197,7 +237,40 @@ function AchievementMeter({ pct }: { pct: number }) {
           0% { transform: translateX(0%); }
           100% { transform: translateX(450%); }
         }
+        @keyframes sparkFly {
+          0% { transform: translate(0,0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+        }
       `}</style>
     </div>
   );
 }
+
+function Confetti() {
+  const sparks = Array.from({ length: 10 });
+  const colors = ["#fde68a", "#6ee7b7", "#fca5a5", "#93c5fd", "#fcd34d"];
+  return (
+    <div className="absolute -top-2 left-1/2 -translate-x-1/2 pointer-events-none">
+      {sparks.map((_, i) => {
+        const angle = (Math.PI * (i / sparks.length)) - Math.PI / 2;
+        const dist = 18 + Math.random() * 14;
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist - 4;
+        return (
+          <span
+            key={i}
+            className="absolute block w-1 h-1 rounded-full"
+            style={{
+              background: colors[i % colors.length],
+              boxShadow: `0 0 6px ${colors[i % colors.length]}`,
+              ["--dx" as any]: `${dx}px`,
+              ["--dy" as any]: `${dy}px`,
+              animation: "sparkFly 900ms ease-out forwards",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
