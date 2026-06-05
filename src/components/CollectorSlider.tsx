@@ -321,12 +321,12 @@ function AchievementMeter({ realPct }: { pct: number; realPct: number }) {
                 style={reached ? { boxShadow: "0 0 6px #6ee7b7" } : undefined}
               />
               <div
-                className={`mt-0.5 text-[10px] font-bold tabular-nums transition-all duration-500 ${reached ? "text-emerald-300 opacity-100" : "text-emerald-300/40 opacity-70"}`}
+                className={`mt-0.5 text-[13px] font-bold tabular-nums transition-all duration-500 ${reached ? "text-emerald-300 opacity-100" : "text-emerald-300/40 opacity-70"}`}
                 style={reached ? { textShadow: "0 0 6px rgba(110,231,183,0.8)" } : undefined}
               >
                 {m.label}
               </div>
-              <div className="text-[9px] tabular-nums text-white/70 mt-0.5">
+              <div className="text-[10px] tabular-nums text-white/70 mt-0.5">
                 {m.at}%
               </div>
               {burst && (
