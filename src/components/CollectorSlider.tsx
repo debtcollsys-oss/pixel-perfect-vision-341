@@ -42,7 +42,7 @@ export function CollectorSlider({
 
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
-      <div className="aspect-square w-full p-5 flex flex-col justify-between gap-3">
+      <div className="aspect-square w-full p-5 flex flex-col justify-between gap-1.5">
         {/* Accounts + Wallet */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-primary-foreground/15 px-2.5 py-1.5">
