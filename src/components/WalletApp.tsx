@@ -45,6 +45,22 @@ const firstName = (full?: string | null) => {
 const WA_TEMPLATE = (clientFirst: string, agentFirst: string) =>
   `السلام عليكم ورحمة الله\n\nالأخ / ${clientFirst}\n\nمساء الخير 🤍\n\nمعك أخوك ${agentFirst}\n\nمن إدارة البنك الأهلي السعودي بجدة\n\nالإدارة العامة \n\nأعتذر عن الإزعاج ، تواصلي معك بخصوص مبلغ المديونية القائم عليك \n\nإذا حاب تستفيد من الخصم المقدم لك من البنك الأهلي بموجب خطاب تسوية ، أو مناقشة بدائل أخرى لمعالجة التعثر، ومن ضمنها :\n\n✔︎ إعادة الجدولة \n\n✔︎ شراء المديونية،\n\n✔︎ تقديم طلب إعفاء من المديونية ، في حال وجود تقرير طبي يوضح العجز وعدم اللياقة الطبية للعمل.\n\nويهدف هذا التواصل إلى دراسة إمكانية معالجة التعثر والوقوف على رغبتكم ، والإستماع إلى مقترحاتكم ، والعمل معكم للوصول إلى حل مناسب لكم أولًا ، وبما ترونه أنتم ملائماً حسب وضعكم المالي وبما يتوافق مع الأنظمة المعمول بها \n\nوشكراً 🤍`;
 
+function HeaderDateTime() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const weekday = now.toLocaleDateString("ar-SA-u-ca-gregory", { weekday: "long" });
+  const date = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const time = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  return (
+    <p className="text-xs text-muted-foreground truncate tabular-nums">
+      {weekday} · {time} · {date}
+    </p>
+  );
+}
+
 export default function WalletApp() {
   const { customers, meta, hydrated, replaceData, resetData } = useWallet();
   const { states, update, addLog } = useCustomerStates();
@@ -199,10 +215,7 @@ export default function WalletApp() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold leading-tight truncate">إدارة المحفظة</h1>
-            <p className="text-xs text-muted-foreground truncate">
-              {meta.fileName} · {meta.count} عميل
-              {meta.uploadedAt ? ` · رُفع ${new Date(meta.uploadedAt).toLocaleDateString("en-US")}` : ""}
-            </p>
+            <HeaderDateTime />
           </div>
           <input
             ref={fileRef}
