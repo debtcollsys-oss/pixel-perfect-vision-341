@@ -96,7 +96,7 @@ export function CollectorSlider({
             <span>مؤشر التحقيق التفاعلي</span>
           </div>
           <AchievementMeter pct={pct} realPct={pct} />
-          <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
+          <div className="flex items-center justify-between mt-1 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
           </div>
