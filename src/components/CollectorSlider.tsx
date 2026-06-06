@@ -43,46 +43,23 @@ export function CollectorSlider({
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
       <div className="aspect-square w-full p-5 flex flex-col justify-between gap-3">
-        {/* Date */}
-        <div className="flex items-center justify-between gap-2 text-[11px] opacity-90">
-          <div className="font-bold text-sm">
-            {now.toLocaleDateString("ar-SA-u-ca-gregory", { weekday: "long" })}
-          </div>
-          <div className="text-left leading-tight">
-            <div className="tabular-nums">
-              {now.toLocaleDateString("ar-SA-u-ca-islamic-umalqura", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </div>
-            <div className="tabular-nums opacity-80">
-              {now.toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
-            </div>
-          </div>
-        </div>
-
         {/* Accounts + Wallet */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-xl bg-primary-foreground/15 p-2.5">
-            <div className="flex items-center gap-1.5 text-[11px] opacity-85">
-              <Users className="size-3.5" />
+          <div className="rounded-xl bg-primary-foreground/15 px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] opacity-85">
+              <Users className="size-3" />
               <span>عدد الحسابات</span>
             </div>
-            <div className="mt-1 text-lg font-bold tabular-nums leading-none">
+            <div className="mt-0.5 text-base font-bold tabular-nums leading-none">
               {accountsCount.toLocaleString("en-US")}
             </div>
           </div>
-          <div className="rounded-xl bg-primary-foreground/15 p-2.5">
-            <div className="flex items-center gap-1.5 text-[11px] opacity-85">
-              <Wallet className="size-3.5" />
+          <div className="rounded-xl bg-primary-foreground/15 px-2.5 py-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] opacity-85">
+              <Wallet className="size-3" />
               <span>رصيد المحفظة</span>
             </div>
-            <div className="mt-1 text-lg font-bold tabular-nums leading-none truncate">
+            <div className="mt-0.5 text-base font-bold tabular-nums leading-none truncate">
               {formatSAR(walletTotal)}
             </div>
           </div>
@@ -90,8 +67,8 @@ export function CollectorSlider({
 
         {/* Countdown */}
         <div>
-          <div className="flex items-center gap-1.5 text-[11px] opacity-85 mb-1.5">
-            <Clock className="size-3.5" />
+          <div className="flex items-center gap-1.5 text-[10px] opacity-85 mb-1">
+            <Clock className="size-3" />
             <span>المتبقي على نهاية الشهر</span>
           </div>
           <div className="grid grid-cols-4 gap-1.5 text-center">
@@ -101,8 +78,8 @@ export function CollectorSlider({
               { v: mins, l: "دقيقة" },
               { v: secs, l: "ثانية" },
             ].map((it) => (
-              <div key={it.l} className="rounded-md bg-primary-foreground/15 py-1.5">
-                <div className="text-lg font-bold tabular-nums leading-none">
+              <div key={it.l} className="rounded-md bg-primary-foreground/15 py-1">
+                <div className="text-base font-bold tabular-nums leading-none">
                   {String(it.v).padStart(2, "0")}
                 </div>
                 <div className="text-[9px] opacity-80 mt-0.5">{it.l}</div>
@@ -110,6 +87,7 @@ export function CollectorSlider({
             ))}
           </div>
         </div>
+
 
         {/* Achievement - interactive gradient indicator */}
         <div>
