@@ -199,10 +199,7 @@ export default function WalletApp() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold leading-tight truncate">إدارة المحفظة</h1>
-            <p className="text-xs text-muted-foreground truncate">
-              {meta.fileName} · {meta.count} عميل
-              {meta.uploadedAt ? ` · رُفع ${new Date(meta.uploadedAt).toLocaleDateString("en-US")}` : ""}
-            </p>
+            <HeaderDateTime />
           </div>
           <input
             ref={fileRef}
