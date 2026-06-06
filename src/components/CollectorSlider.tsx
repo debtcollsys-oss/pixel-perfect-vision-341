@@ -42,7 +42,7 @@ export function CollectorSlider({
 
   return (
     <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-br from-primary via-primary to-primary/80 text-primary-foreground">
-      <div className="aspect-square w-full p-5 flex flex-col justify-between gap-3">
+      <div className="aspect-square w-full p-5 flex flex-col justify-between gap-1.5">
         {/* Accounts + Wallet */}
         <div className="grid grid-cols-2 gap-2">
           <div className="rounded-xl bg-primary-foreground/15 px-2.5 py-1.5">
@@ -96,7 +96,7 @@ export function CollectorSlider({
             <span>مؤشر التحقيق التفاعلي</span>
           </div>
           <AchievementMeter pct={pct} realPct={pct} />
-          <div className="flex items-center justify-between mt-2 text-[11px] tabular-nums" dir="ltr">
+          <div className="flex items-center justify-between mt-1 text-[11px] tabular-nums" dir="ltr">
             <span className="font-bold">{formatSAR(collected)} SAR</span>
             <span className="font-bold opacity-90">{formatSAR(TARGET)} SAR</span>
           </div>
