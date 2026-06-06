@@ -280,6 +280,29 @@ function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: numbe
             <BigFireworks color={pausedMilestone.color} />
           </div>
         )}
+        {/* Inside-bar tick marks 0%..100% */}
+        <div className="absolute inset-0 pointer-events-none">
+          {Array.from({ length: 11 }, (_, i) => i * 10).map((p) => {
+            const reached = displayPct >= p;
+            return (
+              <div
+                key={p}
+                className="absolute top-0 bottom-0 flex flex-col items-center justify-between py-0.5"
+                style={{ left: `${p}%`, transform: "translateX(-50%)" }}
+              >
+                <div
+                  className={`w-px h-1.5 ${reached ? "bg-white/90" : "bg-white/40"}`}
+                />
+                <div
+                  className={`text-[7px] font-bold tabular-nums leading-none ${reached ? "text-white" : "text-white/60"}`}
+                  style={{ textShadow: "0 1px 2px rgba(0,0,0,0.7)" }}
+                >
+                  {p}
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           {pausedMilestone && showMessage ? (
             <span
@@ -308,40 +331,22 @@ function AchievementMeter({ realPct, staticMode }: { pct: number; realPct: numbe
             </span>
           )}
         </div>
-      </div>
-
-
-      <div className="relative h-10 mt-1">
+        {/* Confetti bursts at milestones */}
         {MILESTONES.map((m) => {
-          const reached = displayPct >= m.at;
-
           const burst = bursts[m.at];
+          if (!burst) return null;
           return (
             <div
               key={m.at}
-              className="absolute top-0 -translate-x-1/2 flex flex-col items-center"
+              className="absolute top-0 -translate-x-1/2 pointer-events-none"
               style={{ left: `${m.at}%` }}
             >
-              <div
-                className={`w-px h-2 transition-all ${reached ? "bg-emerald-300" : "bg-emerald-300/30"}`}
-                style={reached ? { boxShadow: "0 0 6px #6ee7b7" } : undefined}
-              />
-              <div
-                className={`mt-0.5 text-[13px] font-bold tabular-nums transition-all duration-500 ${reached ? "text-emerald-300 opacity-100" : "text-emerald-300/40 opacity-70"}`}
-                style={reached ? { textShadow: "0 0 6px rgba(110,231,183,0.8)" } : undefined}
-              >
-                {m.label}
-              </div>
-              <div className="text-[10px] tabular-nums text-white/70 mt-0.5">
-                {m.at}%
-              </div>
-              {burst && (
-                <Confetti key={burst} />
-              )}
+              <Confetti key={burst} />
             </div>
           );
         })}
       </div>
+
 
       <style>{`
         @keyframes meterShimmer {
